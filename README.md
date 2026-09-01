@@ -273,6 +273,8 @@ docs/
 
 ## Documentation index
 
+- **[STATE.md](STATE.md)** — what actually exists and works right now, verified not assumed.
+- **[PLAN.md](PLAN.md)** — what's next, in dependency order.
 - **[docs/MANUAL.md](docs/MANUAL.md)** — day-to-day command reference, every
   flag, worked examples, troubleshooting.
 - **[docs/PUBLISHING.md](docs/PUBLISHING.md)** — the checklist for actually
