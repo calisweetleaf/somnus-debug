@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Somnus Sovereign Systems' project-agnostic Python developer toolkit: production-readiness diagnostics, class/definition structure indexing, pycache cleanup, and a portable single-test harness scaffold."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Daeron Rowell / Somnus Sovereign Systems" }]
 keywords = ["somnus", "static-analysis", "ast", "linter", "devtools", "cli"]
 classifiers = [
@@ -18,7 +19,10 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
     "Intended Audience :: Developers",
-    "Private :: Do Not Upload",
+    "Environment :: Console",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Debuggers",
+    "Development Status :: 3 - Alpha",
 ]
 # doctor and structure are deliberately stdlib-only (doctor ships its own
 # minimal YAML parser for python_doctor.yaml so it has zero deps). The
@@ -30,8 +34,8 @@ dependencies = ["pyyaml"]
 [project.optional-dependencies]
 dev = ["pytest>=7"]
 
-[project.urls]
-Homepage = "https://github.com/somnus-sovereign-systems/somnus-debug"
+# [project.urls] intentionally omitted: no public repository exists yet.
+# Add Homepage/Repository/Issues here once one does -- see docs/PUBLISHING.md.
 
 [project.scripts]
 somnus-debug = "somnus_debug.cli:main"
@@ -39,8 +43,24 @@ somnus-doctor = "somnus_debug.doctor.core:main"
 somnus-structure = "somnus_debug.structure.core:main"
 somnus-pycache-clean = "somnus_debug.pycache_cleaner.core:main"
 
+# Runtime artifacts that tools in this package generate when *run* (doctor's
+# state DB and reports, self-check output, log files) must never ship inside
+# the package itself -- they're build-directory pollution from testing, not
+# package content. Excluded explicitly here rather than relying on VCS-based
+# file selection, since this repo may not always have a clean git history to
+# select from.
+[tool.hatch.build]
+exclude = [
+    "**/.python_doctor/",
+    "**/*_report.md",
+    "**/*_report.json",
+    "**/production_doctor.log",
+    "**/__pycache__/",
+    "**/*.pyc",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/somnus_debug"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/somnus_debug", "README.md", "docs/**"]
+include = ["src/somnus_debug", "README.md", "LICENSE", "docs/**"]
