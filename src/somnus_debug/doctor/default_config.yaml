@@ -1,0 +1,64 @@
+schema_version: "3.0"
+min_function_lines: 5
+min_class_lines: 6
+min_docstring_length: 18
+max_cyclomatic_complexity: 12
+max_report_evidence_lines: 5
+include_patterns:
+  - "tools/*.py"
+  - "tools/native/speech/*.py"
+  - "test/*.py"
+  - "test/speech/*.py"
+ignore_patterns:
+  - "__pycache__/*"
+  - "*.pyc"
+  - ".git/*"
+  - ".venv/*"
+  - "venv/*"
+  - "potential-project-developments/*"
+  - ".python_doctor/*"
+  - "reports/*"
+  - "test/*/runs/*"
+ignore_functions:
+  - "__repr__"
+  - "__str__"
+ignore_classes: []
+check_private_functions: false
+check_nested_functions: true
+require_module_docstring: true
+require_class_docstring: true
+require_function_docstring: true
+require_parameter_hints: true
+require_return_hints: true
+detect_unused_imports: true
+detect_test_gaps: true
+detect_security_risks: true
+detect_silent_failures: true
+detect_dependency_cycles: true
+state_dir: ".python_doctor"
+reports_dir: "reports"
+report_basename: "production_doctor_report"
+severity_exit_level: "serious"
+max_workers: 4
+markdown_include_css: true
+severity_levels:
+  analysis_read_errors: "critical"
+  syntax_errors: "critical"
+  tokenization_errors: "critical"
+  missing_imports: "serious"
+  dependency_cycles: "serious"
+  stubs: "serious"
+  placeholder_returns: "serious"
+  incomplete_methods: "serious"
+  suspicious_short_classes: "serious"
+  silent_failures: "serious"
+  broad_exceptions: "serious"
+  security_risks: "serious"
+  test_gaps: "serious"
+  todos: "minor"
+  missing_docstrings: "minor"
+  suspicious_short_functions: "minor"
+  type_hint_gaps: "minor"
+  complexity: "minor"
+  unused_imports: "minor"
+  duplicate_definitions: "minor"

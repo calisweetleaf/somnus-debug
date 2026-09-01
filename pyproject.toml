@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "somnus-debug"
+version = "0.1.0"
+description = "Somnus Sovereign Systems' project-agnostic Python developer toolkit: production-readiness diagnostics, class/definition structure indexing, pycache cleanup, and a portable single-test harness scaffold."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [{ name = "Daeron Rowell / Somnus Sovereign Systems" }]
+keywords = ["somnus", "static-analysis", "ast", "linter", "devtools", "cli"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Private :: Do Not Upload",
+]
+# doctor and structure are deliberately stdlib-only (doctor ships its own
+# minimal YAML parser for python_doctor.yaml so it has zero deps). The
+# pycache cleaner is the one tool that actually imports PyYAML at runtime
+# (pycache_cleaner/core.py) for its own config.yaml -- so it's a real
+# dependency of this package, not an omission.
+dependencies = ["pyyaml"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/somnus-sovereign-systems/somnus-debug"
+
+[project.scripts]
+somnus-debug = "somnus_debug.cli:main"
+somnus-doctor = "somnus_debug.doctor.core:main"
+somnus-structure = "somnus_debug.structure.core:main"
+somnus-pycache-clean = "somnus_debug.pycache_cleaner.core:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/somnus_debug"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/somnus_debug", "README.md", "docs/**"]
