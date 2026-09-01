@@ -34,8 +34,11 @@ dependencies = ["pyyaml"]
 [project.optional-dependencies]
 dev = ["pytest>=7"]
 
-# [project.urls] intentionally omitted: no public repository exists yet.
-# Add Homepage/Repository/Issues here once one does -- see docs/PUBLISHING.md.
+[project.urls]
+Homepage = "https://github.com/calisweetleaf/somnus-agnostic-test"
+Repository = "https://github.com/calisweetleaf/somnus-agnostic-test"
+Issues = "https://github.com/calisweetleaf/somnus-agnostic-test/issues"
+Documentation = "https://github.com/calisweetleaf/somnus-agnostic-test/blob/master/docs/MANUAL.md"
 
 [project.scripts]
 somnus-debug = "somnus_debug.cli:main"

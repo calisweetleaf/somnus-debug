@@ -1,5 +1,16 @@
 <div align="center">
 
+  <img src="assets/somnus-debug-banner.svg" width="460" alt="somnus-debug — Python Developer Toolkit" />
+
+</div>
+
+<!--
+ORIGINAL INLINE SVG — preserved verbatim.
+GitHub sanitizes inline SVG in README rendering, so the renderable copy lives at
+assets/somnus-debug-banner.svg and is referenced above.
+
+<div align="center">
+
 <svg width="460" height="200" viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="sdGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -22,6 +33,7 @@
 </svg>
 
 </div>
+-->
 
 <p align="center"><em>What used to be four scripts copied by hand between projects, now one package with one CLI.</em></p>
 
@@ -38,6 +50,11 @@
 <!-- ============================================================ -->
 <!-- GLOBAL STYLES — Somnus Documentation Design System v3        -->
 <!-- ============================================================ -->
+
+<!--
+ORIGINAL SOMNUS DOCUMENTATION DESIGN SYSTEM v3 CSS — preserved verbatim.
+GitHub README sanitization does not apply arbitrary <style> blocks/classes, so the
+rendered sections below use GitHub-native Markdown while retaining this source.
 
 <style>
 .t {
@@ -114,6 +131,7 @@
 .mon-fill { height: 100%; border-radius: 2px; }
 .mon-val { color: #c9d1d9; text-align: right; font-size: 11px; }
 </style>
+-->
 
 ## What this is
 
@@ -150,6 +168,32 @@ what's still open before it happens.
 Every tool is also installed as its own script for muscle memory:
 `somnus-doctor`, `somnus-structure`, `somnus-pycache-clean`.
 
+> **somnus-debug · quickstart** · `SESSION`
+
+```console
+daeron@somnus:~$ pip install -e .
+Successfully installed somnus-debug-0.1.0
+
+daeron@somnus:~$ somnus-debug doctor init-config -o python_doctor.yaml
+Wrote default configuration: python_doctor.yaml
+
+daeron@somnus:~$ somnus-debug doctor scan . -o report.md
+Scan complete: files=42, issues=118, critical=0, serious=9
+
+daeron@somnus:~$ somnus-debug structure src/core.py -o CORE_INDEX.md
+Class Index for `core.py` written to CORE_INDEX.md
+
+daeron@somnus:~$ somnus-debug pycache-clean --config config.yaml --dry-run
+Summary: deleted 6 directories, 0 files; freed 2.10 MiB # dry run — nothing actually removed
+
+daeron@somnus:~$ █
+```
+
+<!--
+ORIGINAL QUICKSTART TERMINAL HTML — preserved verbatim.
+GitHub strips/ignores the CSS classes that make this terminal card work, so the
+console block above is the GitHub-renderable equivalent.
+
 <div class="t">
   <div class="t-hdr">
     <div class="t-btn r"></div><div class="t-btn y"></div><div class="t-btn g"></div>
@@ -174,6 +218,7 @@ Every tool is also installed as its own script for muscle memory:
     <div class="cmd" style="margin-top:8px;"><span class="prompt">daeron@somnus:~$</span> <span class="cur"></span></div>
   </div>
 </div>
+-->
 
 Full flag reference and worked examples for every command:
 **[`docs/MANUAL.md`](docs/MANUAL.md)**.
@@ -182,6 +227,23 @@ Full flag reference and worked examples for every command:
 
 Honest, not aspirational — this reflects what's actually been verified,
 not what's planned.
+
+> **somnus-debug · build status — 2026-09-01** · `STATUS`
+
+| Component | Progress | Status |
+|---|:---:|---|
+| Package skeleton | `██████████ 100%` | ✅ verified |
+| doctor / structure / pycache-clean | `██████████ 100%` | ✅ verified |
+| init-test-harness | `██████████ 100%` | ✅ verified |
+| Wheel build + install | `██████████ 100%` | ✅ verified |
+| git version control | `████░░░░░░ 40%` | ⚠️ blocked |
+| PyPI publish | `░░░░░░░░░░ 0%` | ❌ not started |
+| doctor / structure feature expansion | `░░░░░░░░░░ 0%` | ❌ not started |
+
+<!--
+ORIGINAL BUILD-STATUS TERMINAL HTML — preserved verbatim.
+GitHub strips/ignores the CSS grid, gradients, and status classes, so the table
+above is the GitHub-renderable equivalent.
 
 <div class="t">
   <div class="t-hdr">
@@ -227,6 +289,7 @@ not what's planned.
     </div>
   </div>
 </div>
+-->
 
 > **Open items.** `.git` got stuck on a stale `index.lock` during the initial
 > packaging pass (a sandboxed shell couldn't clean up after itself) — see
@@ -290,6 +353,17 @@ docs/
 
 <div align="center">
 
+  <img src="assets/somnus-sovereign-systems-footer.svg" width="400" alt="SOMNUS SOVEREIGN SYSTEMS" />
+
+</div>
+
+<!--
+ORIGINAL INLINE FOOTER SVG — preserved verbatim.
+GitHub sanitizes inline SVG in README rendering; the same SVG is stored at
+assets/somnus-sovereign-systems-footer.svg and referenced above.
+
+<div align="center">
+
 <svg width="400" height="48" viewBox="0 0 400 48" xmlns="http://www.w3.org/2000/svg">
   <rect width="400" height="48" fill="#0d1117" rx="6"/>
   <line x1="60" y1="24" x2="170" y2="24" stroke="#21262d" stroke-width="1"/>
@@ -298,3 +372,4 @@ docs/
 </svg>
 
 </div>
+-->

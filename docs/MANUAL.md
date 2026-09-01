@@ -11,6 +11,13 @@ governing documents for the test-harness contract and agent security
 posture respectively, and `docs/Python_Doctor_QUICKSTART.md` is the deep
 reference specifically for the doctor's config surface.
 
+**For agents:** `SKILL/somnus-debug.md` is the short trigger-conditions +
+cheat-sheet version of this document, meant to be pointed at from a
+project's `AGENTS.md`/`CLAUDE.md` so any agent picks up this toolkit
+without re-deriving when to use it. This file is the one that's actually
+authoritative on exact flags/behavior — when the two disagree, this one is
+right; the SKILL file is the one that's expected to occasionally lag.
+
 ---
 
 ## 1. Install

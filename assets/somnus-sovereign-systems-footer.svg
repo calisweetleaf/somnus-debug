@@ -1,0 +1,6 @@
+<svg width="400" height="48" viewBox="0 0 400 48" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="48" fill="#0d1117" rx="6"/>
+  <line x1="60" y1="24" x2="170" y2="24" stroke="#21262d" stroke-width="1"/>
+  <line x1="230" y1="24" x2="340" y2="24" stroke="#21262d" stroke-width="1"/>
+  <text x="200" y="28" font-family="'Courier New', monospace" font-size="10" fill="#484f58" text-anchor="middle" letter-spacing="3">SOMNUS SOVEREIGN SYSTEMS</text>
+</svg>
