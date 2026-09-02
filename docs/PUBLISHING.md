@@ -1,20 +1,21 @@
 # Publishing somnus-debug
 
-**Status as of 2026-09-01: not published anywhere.** `pip install somnus-debug`
-does not work yet — today it's `git clone` + `pip install -e .`. `somnus-debug`
-*is* confirmed unclaimed on PyPI (checked 2026-09-01), and the package is
-license/metadata-ready for a public release (MIT, see `LICENSE`). This
-document is the checklist for when you actually pull the trigger — nothing
-in it has been run against the real index yet.
+**Status as of 2026-09-01: not published to TestPyPI or PyPI.** The canonical
+public repository is [calisweetleaf/somnus-debug](https://github.com/calisweetleaf/somnus-debug).
+`somnus-debug` returned a 404 from PyPI's JSON endpoint when rechecked on
+2026-09-01, so the normalized project name is presently unclaimed. That is
+not a reservation: only a successful PyPI upload claims it. This document is
+the release gate; no command here uploads to a public index without Daeron's
+explicit authority in that moment.
 
 ## Before the first real publish
 
-- [ ] Decide on and create the real public repository (GitHub or wherever) and
-      fill in `[project.urls]` in `pyproject.toml` (Homepage, Repository,
-      Issues) — currently omitted because there is no real URL to point at.
-- [ ] Get `git` actually initialized and committed (see `docs/MANUAL.md` §7.4
-      for the stale-lock issue from the initial packaging pass, if it's still
-      unresolved).
+- [x] Public repository exists and its canonical URL is
+      `https://github.com/calisweetleaf/somnus-debug`; `[project.urls]` points
+      there.
+- [ ] From Daeron's normal terminal, confirm the intended release commit is
+      committed and pushed. Do not use a sandboxed bridge session for that
+      Git decision or cleanup.
 - [ ] Decide the real author contact (`authors` in `pyproject.toml` has a name
       only, no email — PyPI doesn't require one, but you may want it).
 - [ ] Delete or archive the old root-level duplicate scripts
@@ -24,28 +25,35 @@ in it has been run against the real index yet.
       package build already (only `src/`, `README.md`, `LICENSE`, `docs/**`
       are included per `[tool.hatch.build.targets.sdist]`), but they
       shouldn't linger in the repo either.
-- [ ] Run the full check below and get a clean bill of health.
+- [ ] Build the final release artifacts from that exact commit, record their
+      SHA-256 digests, run the full check below, and get a clean bill of
+      health.
 
 ## Build and check locally
 
 ```bash
-pip install --upgrade build twine
-python -m build                      # produces dist/*.whl and dist/*.tar.gz
-twine check dist/*                   # validates metadata, README rendering, etc.
+python -m venv /tmp/somnus-debug-release
+/tmp/somnus-debug-release/bin/pip install --upgrade build twine
+/tmp/somnus-debug-release/bin/python -m build  # produces dist/*.whl and dist/*.tar.gz
+/tmp/somnus-debug-release/bin/twine check dist/*
+sha256sum dist/*
 ```
 
 Install the built wheel into a throwaway venv and smoke-test it before
 uploading anything:
 
 ```bash
-python -m venv /tmp/sd-verify && /tmp/sd-verify/bin/pip install dist/somnus_debug-*.whl
+python -m venv /tmp/sd-verify
+/tmp/sd-verify/bin/pip install dist/somnus_debug-*.whl
+/tmp/sd-verify/bin/somnus-debug --version
 /tmp/sd-verify/bin/somnus-debug --help
-/tmp/sd-verify/bin/pytest tests/  # if you copy tests/ + dev deps in too
 ```
 
 ## Publish to TestPyPI first
 
 Always. Never skip straight to real PyPI, even for a "trivial" version bump.
+TestPyPI validates the release artifact and upload credentials, but does not
+claim the name on real PyPI.
 
 ```bash
 twine upload --repository testpypi dist/*
@@ -53,18 +61,21 @@ pip install --index-url https://test.pypi.org/simple/ --no-deps somnus-debug
 ```
 
 You'll need a TestPyPI account and an API token (`~/.pypirc` or
-`TWINE_USERNAME=__token__` / `TWINE_PASSWORD=<token>` env vars). Never commit
-a token to the repo.
+`TWINE_USERNAME=__token__` / `TWINE_PASSWORD=<token>` env vars). Never print,
+commit, or paste a token into an agent conversation.
 
 ## Publish to real PyPI
 
-Only after the TestPyPI install actually works end to end:
+Only after the TestPyPI install actually works end to end and Daeron gives a
+new, explicit real-index approval:
 
 ```bash
 twine upload dist/*
 ```
 
 From that point on, `pip install somnus-debug` works for anyone, anywhere.
+PyPI normalizes hyphens, underscores, and dots in project names, so this
+claims the `somnus-debug` normalized namespace rather than spelling variants.
 There is no unpublish — a version can be yanked (hidden from fresh installs,
 but not deleted) but never truly removed. Treat every upload as permanent.
 

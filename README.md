@@ -42,7 +42,7 @@ assets/somnus-debug-banner.svg and is referenced above.
   <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-667eea?style=flat-square" alt="Python 3.10-3.12"/>
   <img src="https://img.shields.io/badge/PyPI-not%20yet%20published-febc2e?style=flat-square" alt="Not yet on PyPI"/>
   <img src="https://img.shields.io/badge/Status-Alpha-febc2e?style=flat-square" alt="Status: Alpha"/>
-  <img src="https://img.shields.io/badge/Tests-9%2F9%20passing%20(manual)-28c840?style=flat-square" alt="9/9 tests passing"/>
+  <img src="https://img.shields.io/badge/Tests-10%2F10%20passing-28c840?style=flat-square" alt="10/10 tests passing"/>
 </p>
 
 ---
@@ -147,7 +147,7 @@ CLI instead of loose scripts.
 
 ```bash
 git clone <this repo>
-cd somnus-agnostic-test
+cd somnus-debug
 pip install -e .
 ```
 
@@ -236,7 +236,7 @@ not what's planned.
 | doctor / structure / pycache-clean | `██████████ 100%` | ✅ verified |
 | init-test-harness | `██████████ 100%` | ✅ verified |
 | Wheel build + install | `██████████ 100%` | ✅ verified |
-| git version control | `████░░░░░░ 40%` | ⚠️ blocked |
+| public release synchronization | `████████░░ 80%` | release candidate verified |
 | PyPI publish | `░░░░░░░░░░ 0%` | ❌ not started |
 | doctor / structure feature expansion | `░░░░░░░░░░ 0%` | ❌ not started |
 
@@ -291,10 +291,8 @@ above is the GitHub-renderable equivalent.
 </div>
 -->
 
-> **Open items.** `.git` got stuck on a stale `index.lock` during the initial
-> packaging pass (a sandboxed shell couldn't clean up after itself) — see
-> `docs/MANUAL.md` §7.4 for the one-command fix. `pip install somnus-debug`
-> means an actual PyPI upload, which hasn't happened — see
+> **Open items.** `pip install somnus-debug` means an actual PyPI upload,
+> which has not happened — the required TestPyPI-first release gate is in
 > `docs/PUBLISHING.md`. The old root-level scripts
 > (`python_production_doctor.py`, `analyze_python_structure.py`,
 > `pycache_cleaner.py`, `run_test.py`, `python_doctor.yaml`) are still sitting
@@ -325,7 +323,7 @@ src/somnus_debug/
     structure/core.py          = old analyze_python_structure.py
     pycache_cleaner/core.py    = old pycache_cleaner.py
     test_harness/scaffold.py + templates/{run_test.py, CONTRACT.md}
-tests/test_cli_smoke.py      9 passing smoke tests
+    tests/test_cli_smoke.py      10 real subprocess CLI smoke tests
 docs/
     MANUAL.md                  full command reference (start here for usage)
     PUBLISHING.md               the real-PyPI-release checklist
@@ -340,6 +338,9 @@ docs/
 - **[PLAN.md](PLAN.md)** — what's next, in dependency order.
 - **[docs/MANUAL.md](docs/MANUAL.md)** — day-to-day command reference, every
   flag, worked examples, troubleshooting.
+- **[docs/AGENTS_APPENDIX.md](docs/AGENTS_APPENDIX.md)** — pasteable global or
+  repository-local agent guidance; installation and instruction hydration are
+  intentionally separate.
 - **[docs/PUBLISHING.md](docs/PUBLISHING.md)** — the checklist for actually
   shipping this to PyPI.
 - **[docs/Python_Doctor_QUICKSTART.md](docs/Python_Doctor_QUICKSTART.md)** —

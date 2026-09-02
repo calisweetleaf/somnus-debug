@@ -2031,12 +2031,23 @@ def run_scan(args: argparse.Namespace) -> int:
     config_manager = ConfigManager(Path(args.config).resolve() if args.config else None)
     project_root = Path(args.project_root).resolve()
     store = StateStore(project_root, config_manager.config)
-    previous = store.previous_file_index() if not args.no_state else {}
+    state_enabled = not args.no_state
+    previous: Mapping[str, str] = {}
+    if state_enabled:
+        try:
+            previous = store.previous_file_index()
+        except StateStoreError as error:
+            state_enabled = False
+            print(
+                "Warning: local SQLite state is unavailable; continuing without "
+                f"history or rollback ({error.message}).",
+                file=sys.stderr,
+            )
     result = ProjectScanner(project_root, config_manager).scan(previous)
     markdown = MarkdownReportWriter(config_manager.config).render(result)
     json_text = dumps_json(result)
     paths = store.report_paths(result.run_id, Path(args.output).resolve() if args.output else None, Path(args.json_output).resolve() if args.json_output else None)
-    if args.no_state:
+    if not state_enabled:
         write_text_atomic(paths.markdown_path, markdown)
         write_text_atomic(paths.json_path, json_text)
     else:
@@ -2044,7 +2055,7 @@ def run_scan(args: argparse.Namespace) -> int:
     print(f"Scan complete: files={result.summary.files_scanned}, issues={result.summary.total_issues}, critical={result.summary.critical_issues}, serious={result.summary.serious_issues}")
     print(f"Markdown report: {paths.markdown_path}")
     print(f"JSON report: {paths.json_path}")
-    if not args.no_state:
+    if state_enabled:
         print(f"State latest markdown: {paths.latest_markdown_path}")
         print(f"Run ID: {result.run_id}")
     return exit_code_for_summary(result.summary, config_manager.config.severity_exit_level)

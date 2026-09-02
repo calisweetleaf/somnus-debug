@@ -156,6 +156,12 @@ Unless `--no-state` is passed, each scan writes SQLite-backed state under
 `.python_doctor/` in the scanned project root — that's what `history` and
 `rollback` read from.
 
+If SQLite cannot initialize (for example, on a filesystem with weak locking
+or unsupported WAL behavior), `scan` emits a warning and completes in
+stateless mode. The Markdown and JSON reports are still written, but that run
+is not available to `history` or `rollback`. Use `--no-state` when this is
+intentional and you do not want a fallback warning.
+
 For the full config field reference (severity levels, per-check toggles,
 worker count, etc.), see `docs/Python_Doctor_QUICKSTART.md`.
 
@@ -310,14 +316,16 @@ do anything with:
 fatal: Unable to create '.../.git/index.lock': File exists.
 ```
 
-Fix, from a real terminal with normal delete permissions:
+First make sure no Git process is still operating in that repository. Then,
+from a real terminal with normal delete permissions, remove only the stale
+lock:
 
 ```bash
-rm -rf .git
-git init
-git add -A
-git commit -m "Initial commit"
+rm .git/index.lock
 ```
+
+Do not delete `.git` to recover a stale lock; that discards repository state
+instead of repairing the interrupted operation.
 
 ### 7.5 Old root-level scripts are still there next to `src/`
 

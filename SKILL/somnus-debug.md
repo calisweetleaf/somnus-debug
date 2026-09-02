@@ -3,7 +3,11 @@
 **Domain:** Python project diagnostics, structure indexing, cache hygiene, test-harness scaffolding.
 **Audience:** any autonomous agent working in a Python repo with `somnus-debug` available (Claude Code, Codex, Kimi, or any future execution engine — this file has no Claude-specific assumptions).
 **Authority:** below OPSEC.md in the Somnus layer hierarchy. Nothing here overrides an OPSEC constraint; if they conflict, OPSEC wins.
-**Deep reference:** `docs/MANUAL.md` in the [somnus-debug repo](https://github.com/calisweetleaf/somnus-agnostic-test) — every flag, every config field, worked examples, troubleshooting. This file is the trigger conditions and cheat sheet; MANUAL.md is the source of truth for exact syntax. When this file and MANUAL.md disagree, MANUAL.md is right (this file goes stale faster).
+**Deep reference:** `docs/MANUAL.md` in the [somnus-debug repo](https://github.com/calisweetleaf/somnus-debug) — every flag, every config field, worked examples, troubleshooting. This file is the trigger conditions and cheat sheet; MANUAL.md is the source of truth for exact syntax. When this file and MANUAL.md disagree, MANUAL.md is right (this file goes stale faster).
+**Global activation:** `docs/AGENTS_APPENDIX.md` is the canonical pasteable
+appendix. Installing a CLI alone does not hydrate agent instructions; an
+operator must deliberately place that appendix in the intended global or
+repository-local instruction surface.
 
 ## What this is
 
@@ -63,6 +67,10 @@ Full flag reference, config file formats, exit codes, troubleshooting:
 - `doctor`'s default `include_patterns` targets `tools/*.py`/`test/*.py`
   (Somnus-repo convention) — point it at the real project's source globs or
   the scan comes back empty.
+- If SQLite state cannot initialize on a network, FUSE, or weak-locking
+  filesystem, `doctor scan` continues with a warning and writes normal report
+  files without `history`/`rollback` state. Use `--no-state` for deliberate
+  one-off scans.
 - Not yet on public PyPI — `pip install somnus-debug` doesn't work yet;
   it's `git clone` + `pip install -e .` for now.
 
@@ -78,9 +86,7 @@ time.
 ```markdown
 ## somnus-debug toolkit
 
-This project has (or should have) `somnus-debug` available
-(`pip install -e .` from https://github.com/calisweetleaf/somnus-agnostic-test
-until it's on public PyPI). Before hand-rolling a Python AST inspection
+This project has `somnus-debug` available. Before hand-rolling a Python AST inspection
 script, a `__pycache__` cleanup script, or asserting a Python file/project is
 production-ready without running a real scan — use the toolkit instead:
 
@@ -91,5 +97,11 @@ production-ready without running a real scan — use the toolkit instead:
 - `somnus-debug pycache-clean --config <cfg> --dry-run` instead of ad-hoc
   find/rm for cache cleanup.
 
-Full reference: `SKILL/somnus-debug.md` and `docs/MANUAL.md` in that repo.
+Do not let a green `doctor` scan replace the project's own integration or
+release verification. Configure its source globs before the first scan; use
+`--no-state` with explicit temporary report paths for disposable diagnostics.
+If SQLite state is unavailable, the scan continues statelessly with a warning.
+
+Full reference: `docs/AGENTS_APPENDIX.md`, `SKILL/somnus-debug.md`, and
+`docs/MANUAL.md` in that repo.
 ```
