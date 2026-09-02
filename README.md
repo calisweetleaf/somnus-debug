@@ -138,12 +138,19 @@ rendered sections below use GitHub-native Markdown while retaining this source.
 Somnus's project-agnostic Python dev tooling — production-readiness
 diagnostics, an AST class/definition indexer, bytecode-cache cleanup, and a
 portable single-test harness scaffold — packaged as one real `pip`-installable
-CLI instead of loose scripts.
+CLI instead of loose scripts. Now available as a PyPi published package. 
+[somnus-debug](https://pypi.org/project/somnus-debug/)
 
 **Zero runtime dependencies beyond `pyyaml`**, and that's only for
 `pycache-clean` — `doctor` and `structure` are stdlib-only.
 
 ## Install
+
+### Recommended
+
+```bash
+pip install somnus-debug
+```
 
 ```bash
 git clone <this repo>
@@ -151,10 +158,7 @@ cd somnus-debug
 pip install -e .
 ```
 
-`pip install somnus-debug` isn't live yet — the package is publish-ready
-(MIT-licensed, real PEP 621 metadata, verified build) but hasn't actually
-been uploaded anywhere. See `docs/PUBLISHING.md` for what that takes and
-what's still open before it happens.
+`pip install somnus-debug` is now live at `https://pypi.org/project/somnus-debug/` as a published package.
 
 ## The tools
 
