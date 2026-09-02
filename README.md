@@ -40,7 +40,7 @@ assets/somnus-debug-banner.svg and is referenced above.
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-6bcf7f?style=flat-square" alt="License: MIT"/>
   <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-667eea?style=flat-square" alt="Python 3.10-3.12"/>
-  <img src="https://img.shields.io/badge/PyPI-not%20yet%20published-febc2e?style=flat-square" alt="Not yet on PyPI"/>
+  <img src="https://img.shields.io/badge/PyPI-now%20published-febc2e?style=flat-square" alt="Now on PyPI"/>
   <img src="https://img.shields.io/badge/Status-Alpha-febc2e?style=flat-square" alt="Status: Alpha"/>
   <img src="https://img.shields.io/badge/Tests-10%2F10%20passing-28c840?style=flat-square" alt="10/10 tests passing"/>
 </p>
