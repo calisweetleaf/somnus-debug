@@ -232,7 +232,7 @@ Full flag reference and worked examples for every command:
 Honest, not aspirational — this reflects what's actually been verified,
 not what's planned.
 
-> **somnus-debug · build status — 2026-09-01** · `STATUS`
+> **somnus-debug · build status — 2026-10-19** · `STATUS`
 
 | Component | Progress | Status |
 |---|:---:|---|
@@ -241,7 +241,7 @@ not what's planned.
 | init-test-harness | `██████████ 100%` | ✅ verified |
 | Wheel build + install | `██████████ 100%` | ✅ verified |
 | public release synchronization | `████████░░ 80%` | release candidate verified |
-| PyPI publish | `░░░░░░░░░░ 0%` | ❌ not started |
+| PyPI publication | `██████████ 100%` | ✅ published — [PyPI](https://pypi.org/project/somnus-debug/) |
 | doctor / structure feature expansion | `░░░░░░░░░░ 0%` | ❌ not started |
 
 <!--
@@ -340,7 +340,7 @@ docs/
 
 - **[STATE.md](STATE.md)** — what actually exists and works right now, verified not assumed.
 - **[PLAN.md](PLAN.md)** — what's next, in dependency order.
-- **[docs/MANUAL.md](docs/MANUAL.md)** — day-to-day command reference, every
+- **[skills/somnus-debug-fieldkit/SKILL.md](skills/somnus-debug-fieldkit/SKILL.md)** — canonical agent skill and router to its references.\n- **[docs/MANUAL.md](docs/MANUAL.md)** — day-to-day command reference, every
   flag, worked examples, troubleshooting.
 - **[docs/AGENTS_APPENDIX.md](docs/AGENTS_APPENDIX.md)** — pasteable global or
   repository-local agent guidance; installation and instruction hydration are
