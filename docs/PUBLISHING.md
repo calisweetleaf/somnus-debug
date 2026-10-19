@@ -1,14 +1,10 @@
 # Publishing somnus-debug
 
-**Status as of 2026-09-01: not published to TestPyPI or PyPI.** The canonical
-public repository is [calisweetleaf/somnus-debug](https://github.com/calisweetleaf/somnus-debug).
-`somnus-debug` returned a 404 from PyPI's JSON endpoint when rechecked on
-2026-09-01, so the normalized project name is presently unclaimed. That is
-not a reservation: only a successful PyPI upload claims it. This document is
-the release gate; no command here uploads to a public index without Daeron's
-explicit authority in that moment.
+**Publication status updated 2026-10-19:** the maintainer confirms Somnus Debug is published on PyPI. The public project page is [pypi.org/project/somnus-debug](https://pypi.org/project/somnus-debug/). This supersedes the historical 2026-09-01 check below, which preceded publication. The public repository is [calisweetleaf/somnus-debug](https://github.com/calisweetleaf/somnus-debug).
 
-## Before the first real publish
+This document is now the release checklist for subsequent versions. Keep the version declared in `pyproject.toml`, the published PyPI version, and Git tags distinct; the fieldkit's [provenance notes](../skills/somnus-debug-fieldkit/references/provenance.md) record the observed package/tag discrepancy. No command here uploads to a public index without Daeron's explicit authority at that time.
+
+## Before a subsequent publish
 
 - [x] Public repository exists and its canonical URL is
       `https://github.com/calisweetleaf/somnus-debug`; `[project.urls]` points
