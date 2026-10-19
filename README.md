@@ -282,9 +282,9 @@ above is the GitHub-renderable equivalent.
       <span class="mon-val warn">blocked</span>
     </div>
     <div class="mon-row">
-      <span class="mon-label">PyPI publish</span>
-      <span class="mon-bar"><span class="mon-fill" style="width:0%;"></span></span>
-      <span class="mon-val err">not started</span>
+      <span class="mon-label">PyPI publication</span>
+      <span class="mon-bar"><span class="mon-fill" style="width:100%;background:linear-gradient(90deg,#28c840,#667eea);"></span></span>
+      <span class="mon-val ok">published</span>
     </div>
     <div class="mon-row">
       <span class="mon-label">doctor / structure feature expansion</span>
@@ -295,12 +295,7 @@ above is the GitHub-renderable equivalent.
 </div>
 -->
 
-> **Open items.** `pip install somnus-debug` means an actual PyPI upload,
-> which has not happened — the required TestPyPI-first release gate is in
-> `docs/PUBLISHING.md`. The old root-level scripts
-> (`python_production_doctor.py`, `analyze_python_structure.py`,
-> `pycache_cleaner.py`, `run_test.py`, `python_doctor.yaml`) are still sitting
-> next to `src/somnus_debug/` pending cleanup — harmless, just redundant.
+> **Release status.** Somnus Debug is published on PyPI; install with `pip install somnus-debug`. The [PyPI project page](https://pypi.org/project/somnus-debug/) is the live distribution listing. The TestPyPI-first checklist in `docs/PUBLISHING.md` applies to subsequent versions. The old root-level scripts (`python_production_doctor.py`, `analyze_python_structure.py`, `pycache_cleaner.py`, `run_test.py`, `python_doctor.yaml`) remain pending cleanup — harmless, just redundant.
 
 ## Using it as a library
 
@@ -320,6 +315,7 @@ script is importable from `somnus_debug.<tool>.core` too.
 pyproject.toml              package metadata, deps, entry points
 LICENSE                      MIT
 README.md                    this file
+skills/somnus-debug-fieldkit/ canonical routed agent skill package
 src/somnus_debug/
     cli.py                    `somnus-debug <command>` dispatcher
     doctor/core.py             = old python_production_doctor.py
@@ -340,7 +336,8 @@ docs/
 
 - **[STATE.md](STATE.md)** — what actually exists and works right now, verified not assumed.
 - **[PLAN.md](PLAN.md)** — what's next, in dependency order.
-- **[skills/somnus-debug-fieldkit/SKILL.md](skills/somnus-debug-fieldkit/SKILL.md)** — canonical agent skill and router to its references.\n- **[docs/MANUAL.md](docs/MANUAL.md)** — day-to-day command reference, every
+- **[skills/somnus-debug-fieldkit/SKILL.md](skills/somnus-debug-fieldkit/SKILL.md)** — canonical agent skill and router to its references.
+- **[docs/MANUAL.md](docs/MANUAL.md)** — day-to-day command reference, every
   flag, worked examples, troubleshooting.
 - **[docs/AGENTS_APPENDIX.md](docs/AGENTS_APPENDIX.md)** — pasteable global or
   repository-local agent guidance; installation and instruction hydration are
