@@ -10,7 +10,7 @@ This skill was built against the public `calisweetleaf/somnus-debug` repository,
 - The tag points to commit `3ad5e8366ab5d527aa45313a1b535e8912a2dcf3`.
 - PyPI's project page listed the uploaded package as `somnus-debug 0.1.0`, released Sep 2, 2026.
 - The checked repository `pyproject.toml` also declares `0.1.0`. On 2026-10-19, the maintainer confirmed that Somnus Debug is published on PyPI. This is a publication-status update, not a fresh verification of the latest index version; the linked project page is the public source of truth.
-- Some GitHub README/manual text still says publication has not happened and labels older build status. Those statements conflict with the PyPI project listing and the release. Treat them as stale documentation, not installation truth.
+- At the 2026-10-11 research snapshot, the README, short skill, publishing guide, and agent appendix still contained pre-publication claims. The repository's 2026-10-19 update corrected those status statements and routed agents to this fieldkit. Treat the 2026-10-11 wording as historical evidence only, not current installation guidance.
 
 For every target codebase, ask the actual installed CLI for `--version` and each command's `--help`. Do not assume the Git tag version equals the package version. If installed behavior differs from this guide, update the guide from the matching current source before relying on an unfamiliar flag.
 
