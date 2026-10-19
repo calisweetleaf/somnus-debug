@@ -17,8 +17,7 @@ agent. Use the two independent steps below:
    into a project's local `AGENTS.md`. That placement is an operator decision:
    this package must not silently rewrite global instructions.
 
-Before installation, the package is not yet published to PyPI. The source
-repository and release state remain authoritative for the available artifact.
+Somnus Debug is published on PyPI; the project page is https://pypi.org/project/somnus-debug/. Install the CLI and activate agent instructions as separate steps. Check the installed command with `somnus-debug --version` because a Git tag version and PyPI package version are distinct.
 
 ## Pasteable global instruction block
 
@@ -50,7 +49,7 @@ the repository's own AGENTS.md, test commands, or release gates.
   files and refuses overwrite unless forced.
 
 Reference: https://github.com/calisweetleaf/somnus-debug
-Exact flags and troubleshooting: that repository's docs/MANUAL.md.
+Detailed agent workflow: [skills/somnus-debug-fieldkit/SKILL.md](../skills/somnus-debug-fieldkit/SKILL.md). Exact flags and troubleshooting: that repository's docs/MANUAL.md.
 ```
 
 ## Verification after activation
