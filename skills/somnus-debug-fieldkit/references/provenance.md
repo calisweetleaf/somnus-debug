@@ -4,6 +4,26 @@
 
 This skill was built against the public `calisweetleaf/somnus-debug` repository, default branch `master`, tree/commit `3ad5e8366ab5d527aa45313a1b535e8912a2dcf3`. The repository had no later commit visible at research time. Core reference files: `SKILL/somnus-debug.md`, `docs/MANUAL.md`, `docs/Python_Doctor_QUICKSTART.md`, `docs/AGENTS_APPENDIX.md`, `docs/CONTRACT.md`, `src/somnus_debug/cli.py`, `src/somnus_debug/test_harness/scaffold.py`, and `pyproject.toml`.
 
+## Verification basis (2026-11-01)
+
+- `scripts/selftest.py`: 29/29 against the workstation's `somnus-debug` 0.1.0 on PATH, and 29/29 against a fresh `pip install somnus-debug` from PyPI in a clean venv (`--python`).
+- The installed 0.1.0 package, the PyPI 0.1.0 wheel, and the PyPI 0.1.0 sdist are all byte-identical (`diff -r`) to `src/somnus_debug/` at commit `5b6e0c4`. PyPI lists only `0.1.0` (uploaded 2026-09-02). Repository commits after the upload changed docs, README, and the skill, not package code.
+- The sharp edges in `SKILL.md`, the triggers in `findings.md`, and the semantics in `onboarding.md` were read from that source (`CodeQualityVisitor`, `handler_is_silent`, `body_is_stub`, `placeholder_return_kind`, `SECURITY_CALLS`, `TODO_PATTERNS`, `ImportResolver`), plus config loading and matching in `doctor/core.py` (`ConfigManager`, `ProjectFileIndex`), report paths in `StateStore.report_paths`, exit codes in `exit_code_for_summary` and `main`, log location in `setup_logging`, and pycache exclude/roots handling in `pycache_cleaner/core.py`.
+- The repo-root `python_doctor.yaml` there is a pre-packaging leftover (MANUAL §7.5), excluded from the package build and never read by the CLI unless passed with `-c`. Its `tools/*.py`, `test/*.py`, and speech globs come from the Somnus-MCP layout, so it scans zero files against any other tree. Before 2026-11-01, the packaged `src/somnus_debug/doctor/default_config.yaml` and the MANUAL, QUICKSTART, and AGENTS appendix also described those globs as the default, while `init-config` already emitted `*.py`. The packaged file and docs now match `init-config`, and `tests/test_cli_smoke.py::test_packaged_default_config_matches_init_config` enforces it.
+- An earlier private working checkout (pre-rename remote) has the same package code and root scripts. It also holds local operator state (`AGENTS.md`, `PLAN.md`, `STATE.md`, `HANDOFF.md`, `OPSEC.md`) that is intentionally untracked.
+
+## Self-scan of the fieldkit scripts (2026-11-01)
+
+`doctor scan scripts/` reports 6 serious findings, all reviewed and dispositioned. They show what legitimate dispositions look like:
+
+| Finding | Disposition |
+|---|---|
+| `security_risks` `subprocess.run` in `onboard.run`, `selftest.Harness.cli`, `selftest.config_with` | argv list, no shell, fixed executable (somnus-debug or git) |
+| `silent_failures` `delta.main` | CLI boundary: prints the error to stderr and returns exit 3 |
+| `broad_exceptions` + `silent_failures` `selftest.main` | Deliberate: a crashed check group is recorded as a FAIL row with its cause, and the run exits 1 |
+
+The remaining minors are `__future__` import false positives, short helpers, and complexity in the three `main`/render functions.
+
 ## Version split observed
 
 - GitHub's latest tag visible at research time was `v1.5.0`, whose release title is “PyPi Now Published.”
@@ -29,7 +49,7 @@ For every target codebase, ask the actual installed CLI for `--version` and each
 | Package name/version, runtime dependency, scripts | [pyproject.toml](https://github.com/calisweetleaf/somnus-debug/blob/3ad5e8366ab5d527aa45313a1b535e8912a2dcf3/pyproject.toml) |
 | Published package | [PyPI: somnus-debug](https://pypi.org/project/somnus-debug/) |
 
-The checked repository README links to `STATE.md`, `PLAN.md`, and `docs/OPSEC.md`; those paths were absent from the recursive default-branch tree inspected at this snapshot. Do not invent their contents. Always apply the target codebase's actual authority and security instructions.
+The checked repository README links to `STATE.md`, `PLAN.md`, and `docs/OPSEC.md`; those paths were absent from the public default-branch tree at this snapshot. They exist only as untracked local operator state. They are private continuity, not public release content. Always apply the target codebase's actual authority and security instructions.
 
 ## Refresh rule
 

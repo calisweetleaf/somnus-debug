@@ -9,8 +9,9 @@ The skill's required loop is the first automation layer: agent instructions crea
 | Agent starts a Python code task | Check CLI/version, config, target instructions, and baseline coverage. |
 | A meaningful Python edit is complete | Re-index affected files where useful and run a doctor scan before declaring the slice verified. |
 | A diagnostic repair is made | Run the project test/gate and doctor again; compare deltas and repeat if actionable findings remain. |
-| Before commit or handoff | Run a final doctor scan and the repository's actual gate; record reports and any dispositions. |
-| A codebase is first onboarded | Add the `AGENTS.md` appendix, initialize a project-local doctor profile only if absent, and tune coverage to the real tree. |
+| Before commit or handoff | Run a final doctor scan, `delta.py` against the slice baseline, and the repository's actual gate; record the delta verdict and any dispositions. |
+| somnus-debug installed or upgraded | Run `scripts/selftest.py`; update any reference it flags. |
+| A codebase is first onboarded | Run `scripts/onboard.py` (plan, then `--apply --baseline`), review coverage, and add the `AGENTS.md` appendix. See [onboarding](onboarding.md). |
 
 ## Optional hook layers
 
@@ -29,7 +30,7 @@ An adapter should receive the repository root, changed paths, active config, tas
 
 - ignore changes outside configured Python scope;
 - run one coherent scan per completed edit batch;
-- preserve the CLI exit status and report path;
+- preserve the CLI exit status and report path, and gate on `delta.py`'s exit code rather than the raw doctor exit;
 - emit findings as evidence without auto-fixing code or changing config;
 - avoid concurrent scans against the same SQLite state;
 - update the owning task/packet with the result;

@@ -1,27 +1,23 @@
-## somnus-debug fieldkit
+## somnus-debug
 
-Use the global `somnus-debug-fieldkit` skill when the CLI applies to Python work in this repository. This is a supplemental diagnostic route; keep this repository's `AGENTS.md`, project tests, CI, acceptance criteria, and security policy authoritative.
+This repository uses the global `somnus-debug-fieldkit` skill for Python diagnostics. It is a supplemental evidence route. This file's other instructions, the project tests, CI, and acceptance criteria stay authoritative.
 
-### Required diagnose–repair–rescan loop
+**Profile:** `.somnus-debug/PROFILE.md` has the runner, config, coverage, and exact commands. Read it before using somnus-debug here. Run doctor from `.somnus-debug/`.
 
-For any task that changes Python code, use `somnus-debug` iteratively:
+### For any task that changes Python
 
-1. Check `somnus-debug --version` and the command's `--help`; inspect this repo's doctor config and confirm its `include_patterns` cover the Python files in scope.
-2. Run a doctor baseline before editing. Preserve the report/state locally when useful; use `--no-state` only for a disposable scan and report that it has no history.
-3. Use `somnus-debug structure <file.py>` to orient on unfamiliar or structurally central Python files. Read source and tests; the index is AST structure, not runtime behavior.
-4. Verify and classify relevant doctor findings. Fix actionable in-scope issues as part of the real task; record evidence-based dispositions for findings that are false positives or out of scope.
-5. Run the repository's actual tests/build/acceptance gate and run doctor again after meaningful fixes. Compare the report with baseline and repeat while in-scope actionable findings remain, edited files are uncovered, or a new actionable regression appears.
-6. Before handoff, review the final scan, its coverage, doctor history if available, and the native project gate. State any remaining finding or unavailable proof plainly.
+1. Baseline before the first edit: the profile's `doctor scan ... -o runs/baseline.md --json-output runs/baseline.json`.
+2. Make the change, then run this repo's real tests and gates.
+3. Rescan to `runs/latest.*`, then run `delta.py runs/baseline.json runs/latest.json --dispositions dispositions.json` from the skill's `scripts/`.
+4. Triage every new finding, and every persisting one in touched code: fix it, mark it out of scope, disposition it in `dispositions.json` with a reason, or flag it unverified. The skill's `references/findings.md` has the real fixes and known false positives.
+5. Repeat until `delta.py` exits 0 (or each remaining new serious finding is explained) and the native gate passes. In the handoff, state the CLI version, the delta verdict, and the dispositions added.
 
-Do not treat a green doctor severity gate as proof of integration, runtime behavior, security, or release readiness. A zero-file scan means the config is wrong for this repo. Do not lower thresholds or exclude files to obtain a green result.
+### Never
 
-### Tool boundaries
+- Treat a green doctor run as integration, runtime, security, or release proof. It is static analysis, and it does not measure test coverage.
+- Trust a scan without checking `files=`. Zero files exits 0 and means the config is wrong.
+- Lower severities or gates, exclude source, or rename around a check to get a green result.
+- Run `pycache-clean` live without a reviewed dry run and authorization, or pass `--force` to `init-test-harness`.
+- Install watchers, hooks, CI jobs, or packages without the owner's decision.
 
-- `doctor` is configured Python static diagnostics; it is not a complete codebase graph.
-- `structure` indexes one Python file's AST definitions and line spans; it does not import or execute the file.
-- `pycache-clean` deletes matched caches. Always run `--dry-run`, inspect configured roots/exclusions, and perform a live pass only when cleanup is in scope and authorized.
-- `init-test-harness` writes a project-owned `run_test.py` and usually `CONTRACT.md`. Use only if the repo wants that contract and lacks an established harness; never force-overwrite existing files without explicit authority.
-
-Keep any doctor config, scan reports, `.python_doctor/` state, or optional hook inside this repository and follow its existing ignore/retention policy. Do not install a watcher, pre-commit system, dependency, or global tool automatically. In Somnus Accelerate, put the scan and native gate in the active packet's validation/evidence flow; Accelerate continues to own routing and task acceptance.
-
-Exact flags: run `somnus-debug <command> --help`; see the global skill references and upstream [somnus-debug manual](https://github.com/calisweetleaf/somnus-debug/blob/master/docs/MANUAL.md).
+If `.somnus-debug/PROFILE.md` is missing, onboard first with the skill's `scripts/onboard.py <repo>` (plan mode), then `--apply --baseline`.

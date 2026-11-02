@@ -1,6 +1,6 @@
 # Command contract
 
-Use the installed CLI's help first when it differs from this snapshot. This guide is organized by actual command surface, not by a generic debugging workflow.
+Use the installed CLI's help first when it differs from this snapshot. `scripts/selftest.py` proves every flag, default, exit code, and side effect listed here against the installed CLI. This guide is organized by command surface. `somnus-debug <cmd>` and `<python> -m somnus_debug.cli <cmd>` are interchangeable; in an onboarded repo, use the runner from `PROFILE.md` (see [install](install.md)).
 
 Pinned source landmarks: [`doctor` manual](https://github.com/calisweetleaf/somnus-debug/blob/3ad5e8366ab5d527aa45313a1b535e8912a2dcf3/docs/MANUAL.md#L81), [doctor state](https://github.com/calisweetleaf/somnus-debug/blob/3ad5e8366ab5d527aa45313a1b535e8912a2dcf3/docs/MANUAL.md#L153), [`structure`](https://github.com/calisweetleaf/somnus-debug/blob/3ad5e8366ab5d527aa45313a1b535e8912a2dcf3/docs/MANUAL.md#L170), [`pycache-clean`](https://github.com/calisweetleaf/somnus-debug/blob/3ad5e8366ab5d527aa45313a1b535e8912a2dcf3/docs/MANUAL.md#L208), [`init-test-harness`](https://github.com/calisweetleaf/somnus-debug/blob/3ad5e8366ab5d527aa45313a1b535e8912a2dcf3/docs/MANUAL.md#L258), and [doctor YAML/report behavior](https://github.com/calisweetleaf/somnus-debug/blob/3ad5e8366ab5d527aa45313a1b535e8912a2dcf3/docs/Python_Doctor_QUICKSTART.md#L26).
 
@@ -15,7 +15,7 @@ somnus-debug pycache-clean --help
 somnus-debug init-test-harness --help
 ```
 
-Do not install into a global or project environment silently. If the CLI is absent, report it and follow the user's installation policy. The package is published on PyPI as `somnus-debug`; the current published package version and Git tag are recorded separately in `provenance.md` because their numbering differs.
+Install with `pip install somnus-debug` (PyPI), preferably into the project's environment so doctor resolves the project's imports ([install](install.md)). Do not install silently into an environment you don't own. The Git tag and package version numbers differ; see `provenance.md`.
 
 ## `doctor`
 
@@ -29,21 +29,23 @@ somnus-debug doctor rollback [project_root] --run-id RUN_ID [-c CONFIG]
 somnus-debug doctor self-check [-c CONFIG] [-o OUTPUT] [--json-output PATH] [--no-state]
 ```
 
-Common operations:
+Common operations in an onboarded repo (see [onboarding](onboarding.md); `PROFILE.md` holds the repo's exact lines). Run them from `.somnus-debug/` so the doctor log lands there:
 
 ```console
-somnus-debug doctor init-config -o .somnus-debug/python_doctor.yaml
-somnus-debug doctor scan . -c .somnus-debug/python_doctor.yaml -o .somnus-debug/runs/baseline.md --json-output .somnus-debug/runs/baseline.json
-somnus-debug doctor scan . -c .somnus-debug/python_doctor.yaml --no-state -o /tmp/somnus-debug-report.md --json-output /tmp/somnus-debug-report.json
-somnus-debug doctor history . -c .somnus-debug/python_doctor.yaml --limit 10
-somnus-debug doctor self-check
+cd .somnus-debug
+somnus-debug doctor scan .. -c python_doctor.yaml -o runs/baseline.md --json-output runs/baseline.json
+somnus-debug doctor scan .. -c python_doctor.yaml -o runs/latest.md --json-output runs/latest.json
+somnus-debug doctor scan .. -c python_doctor.yaml --no-state -o /tmp/sd-report.md --json-output /tmp/sd-report.json
+somnus-debug doctor history .. -c python_doctor.yaml --limit 10
 ```
 
-Create the parent directory before writing the config or reports. Confirm the output path is inside the active repository's local state area or a deliberate temporary location. `init-config` writes the default. Read and adapt `include_patterns` before the first scan. Do not use `--force` to overwrite an existing config without reviewing and preserving it.
+`init-config` writes the CLI's default YAML (`include_patterns: ["*.py"]`, state in `.python_doctor/`). Prefer `scripts/onboard.py`, which generates from that default and retargets ignores and `state_dir`. Do not use `--force` to overwrite an existing config without reviewing and preserving it.
 
-The scan's exit status is gated by `severity_exit_level` (default `serious` in the checked source). A nonzero status can mean findings exceeded the gate or a runtime failure; read the report and log. Setting the threshold lower or excluding files to make a command green is not a fix.
+Output locations (0.1.0 source): without `-o`, reports go to `<project_root>/production_doctor_report.md` and `.json`. Stateful runs also write `<state_dir>/reports/<run_id>/` and `<state_dir>/reports/latest.md`. Every doctor invocation, including `--help`, writes `production_doctor.log` to the current working directory. Without `-c`, built-in defaults apply; there is no config auto-discovery.
 
-Stateful runs are stored in `.python_doctor/` within the scanned project root. `history` depends on that state. `rollback` restores a previous report as latest and does not change source files.
+The scan's exit status is gated by `severity_exit_level` (default `serious`). Codes: `0` gate passed, `1` serious (or, for `minor`/`info` gates, any gated) findings, `2` critical findings, `4` configuration or doctor error, `5` unclassified runtime failure. A zero-file scan exits `0`, so always check `files=` in the summary line. Setting the threshold lower or excluding files to make a command green is not a fix.
+
+Stateful runs are stored in `state_dir` under the scanned project root (`.python_doctor/` by default, `.somnus-debug/state/` in an onboarded profile). `history` depends on that state. `rollback` restores a previous report as latest and does not change source files.
 
 ## `structure`
 
@@ -64,9 +66,10 @@ There is no bare-root CLI mode. The YAML config must contain `roots:`. A typical
 ```yaml
 roots:
   - /absolute/path/to/project
-exclude:
-  - "node_modules/*"
-  - ".git/*"
+exclude:            # directory NAMES, matched with fnmatchcase; "node_modules/*" never matches
+  - "node_modules"
+  - ".git"
+  - ".venv"
 targets:
   - "__pycache__"
   - "*.pyc"
@@ -83,6 +86,8 @@ Always preview:
 ```console
 somnus-debug pycache-clean --config .somnus-debug/pycache.yaml --dry-run --verbose
 ```
+
+Relative `roots` resolve against the caller's working directory, not the config file, so keep them absolute. Without `--config`, the CLI looks for `./config.yaml`. The onboarded `pycache.yaml` sets `dry_run: true`; the CLI has no flag to force a live pass, so a live run requires a deliberate, authorized edit of that value.
 
 Review the listed roots and targets. A live pass deletes matched caches. Only run it when cleanup is in scope and the operator's authorization boundary permits it. Keep a reviewed config with the intended roots; do not widen it casually.
 

@@ -1,20 +1,40 @@
 # somnus-debug fieldkit
 
-An agent-facing, global skill package for using the existing `somnus-debug` CLI inside individual codebases. The skill and references are global knowledge; configuration, scan state, reports, and any optional hook belong to the target repository.
+A global agent skill for setting up and operating the `somnus-debug` CLI (`pip install somnus-debug`) inside individual Python codebases. The skill is global knowledge plus tested scripts. Configuration, state, reports, and dispositions belong to each target repository's `.somnus-debug/` profile.
 
 ## Package map
 
-- `SKILL.md` is the entry router. Read it first; it points to the right reference for each task.
-- `references/topology.md` maps the toolkit's surfaces and common misreadings.
-- `references/commands.md` gives the command contract and exact safe usage.
-- `references/doctor-loop.md` defines the required diagnose, repair, rescan loop.
-- `references/accelerate-integration.md` explains the boundary with Somnus Accelerate and other harnesses.
-- `references/automation.md` describes low-friction host hooks and optional local automation.
-- `references/provenance.md` records the repository snapshot and version discrepancies this skill was built against.
-- `templates/AGENTS_APPENDIX.md` is the copy-ready block for a global or repo-local `AGENTS.md`.
+```text
+SKILL.md                         entry router: start-here decision, loop commands, rules, sharp edges
+references/
+  install.md                     pip install, which environment, runners, verification
+  onboarding.md                  what "onboarded" means; onboard.py procedure; manual fallback
+  doctor-loop.md                 baseline -> change -> rescan -> delta -> triage protocol
+  findings.md                    every doctor category: trigger, real fix, false positives, evasions
+  commands.md                    command contract: flags, outputs, side effects, exit codes
+  topology.md                    what each tool is and is not; interface and flow map
+  accelerate-integration.md      evidence boundary with Somnus Accelerate and other harnesses
+  automation.md                  hook and CI decisions; adapter contract
+  provenance.md                  what this skill was verified against, and how to refresh it
+scripts/
+  onboard.py                     survey + runner choice + coverage proof + .somnus-debug/ profile
+  delta.py                       baseline vs latest finding diff and regression gate
+  selftest.py                    29-check contract test of every behavioral claim in the skill
+templates/
+  AGENTS_APPENDIX.md             copy-ready block for a repo's AGENTS.md
+```
+
+All scripts are standard-library Python 3.10+, call subprocesses with argv lists (never a shell), and are exercised end to end before each skill revision.
 
 ## Placement
 
-Install the package as a user-level skill, for example under `~/.codex/skills/somnus-debug-fieldkit/`, using the skill loader's normal installation path. Do not install this package into every codebase. A target codebase may receive only its own `AGENTS.md` block, doctor configuration, scan reports, and optional state under the project's own policy.
+Install the folder wherever the agent host loads user skills, for example `~/.factory/skills/somnus-debug-fieldkit/` or `~/.codex/skills/.../somnus-debug-fieldkit/`. Keep every installed copy identical to the canonical source in the somnus-debug repository (`skills/somnus-debug-fieldkit/`). A target codebase receives only its `.somnus-debug/` profile and an `AGENTS.md` block, never a copy of the skill.
 
-This package currently covers `somnus-debug` only. Graphify integration is intentionally deferred; the skill does not claim to construct a complete semantic graph of a repository.
+## Validate after install or upgrade
+
+```console
+python3 scripts/selftest.py                      # against somnus-debug on PATH
+python3 scripts/selftest.py --python .venv/bin/python
+```
+
+Graphify integration is deferred. The skill never presents AST indexes or import-cycle checks as a complete semantic graph.

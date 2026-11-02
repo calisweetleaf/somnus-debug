@@ -10,11 +10,11 @@
 
 ### LBC 2 — Doctor findings are static-analysis evidence
 
-The doctor parses Python source and checks configured patterns for issues such as stubs, placeholder returns, exception handling, cycles, missing documentation or hints, TODOs, security-risk patterns, and test gaps. It does not execute the target code. Its findings need human/agent interpretation and project-native validation.
+The doctor parses Python source and checks configured patterns for issues such as stubs, placeholder returns, exception handling, cycles, missing documentation or hints, TODOs, and security-risk calls. It does not execute the target code. It resolves imports with `find_spec` in its own interpreter, so where it runs changes the results. `test_gaps` is configurable but never emitted in 0.1.0. Findings need interpretation ([findings](findings.md)) and project-native validation.
 
 ### LBC 3 — Include patterns define what exists to the scan
 
-The current doctor config scans only files matching `include_patterns`, then removes matches in `ignore_patterns`. The shipped include globs are not universal. Scanning zero files says nothing about code health.
+The doctor scans only files matching `include_patterns`, then removes matches in `ignore_patterns`. The `init-config` default is `*.py`, but copied Somnus-style configs (`tools/*.py`, `test/*.py`) scan nothing in most repos. Scanning zero files exits 0 and says nothing about code health.
 
 ### LBC 4 — Structure is a per-file AST index
 
@@ -26,7 +26,7 @@ The current doctor config scans only files matching `include_patterns`, then rem
 
 ### LBC 6 — Doctor state is local and conditional
 
-Stateful doctor scans create SQLite state under `.python_doctor/`, enabling `history` and `rollback`. A weak-locking filesystem may cause a warning and stateless continuation. `--no-state` is for deliberate disposable scans; it removes history for that run.
+Stateful doctor scans create SQLite state under `state_dir` (`.python_doctor/` by default, `.somnus-debug/state/` in an onboarded profile), enabling `history` and `rollback`. A weak-locking filesystem may cause a warning and stateless continuation. `--no-state` is for deliberate disposable scans; it removes history for that run.
 
 ### LBC 7 — The harness is a separate contract
 
@@ -43,6 +43,9 @@ The scaffolded one-test surface defines artifact semantics and acceptance for on
 | `structure` | One `.py` file | Definition index to stdout or file | AST only; one file at a time |
 | `pycache-clean` | YAML roots/targets/excludes + dry-run choice | Dry-run plan or cache deletion | Destructive when live |
 | `init-test-harness` | Target directory + overwrite flags | Project-owned `run_test.py`, optionally `CONTRACT.md` | Refuses overwrite unless `--force` |
+| `scripts/onboard.py` | Repo root | `.somnus-debug/` profile, coverage proof, baseline | Never overwrites; plan mode writes nothing |
+| `scripts/delta.py` | Two doctor JSON reports + dispositions | New/resolved/persisting findings, coverage verdict, exit 0/1/2/3 | Reads only |
+| `scripts/selftest.py` | Installed CLI | 29 PASS/FAIL contract checks | Temp dir only |
 
 ## Dependency and flow map
 
@@ -82,11 +85,14 @@ flowchart TD
 | `doctor rollback` | Report-history restoration, not a source-control rollback. |
 | `init-test-harness` | Optional project-owned test scaffold, not a required Accelerate installation. |
 | A config that includes no files | Invalid coverage for the current task, not a passing scan. |
+| No `test_gaps` findings | 0.1.0 never emits them; doctor says nothing about test coverage. |
+| A `missing_imports` flood | Doctor runs outside the project env, or a `src/` layout without `PYTHONPATH=src`. |
 
 ## Entry vectors
 
-- **Cold repo:** read target instructions → check CLI/version → inspect existing config and native gates → configure actual Python paths → baseline scan.
-- **Python implementation task:** read doctor loop → inspect the touched file with `structure` → implement → run native validation → rescan and repeat.
+- **Cold repo:** read target instructions → check CLI/version → look for `.somnus-debug/PROFILE.md` → if absent, `scripts/onboard.py` plan then `--apply --baseline` ([onboarding](onboarding.md)) → add the AGENTS block.
+- **Python implementation task:** read doctor loop → baseline → inspect touched files with `structure` → implement → native validation → rescan → `delta.py` → triage with `findings.md` → repeat.
+- **After install or upgrade:** run `scripts/selftest.py`; fix any reference it names.
 - **Cleanup request:** read command safety in `commands.md` → inspect roots/exclusions → dry-run → obtain authority for live cleanup → run and verify.
 - **Harness request:** inspect existing tests and acceptance → read `CONTRACT.md` summary in `commands.md` → scaffold only if the repo wants it.
 - **Accelerate repo:** read `accelerate-integration.md` and place findings/artifacts in the active packet's existing evidence flow.

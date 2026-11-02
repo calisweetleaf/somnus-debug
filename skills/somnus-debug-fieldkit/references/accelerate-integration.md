@@ -27,6 +27,6 @@ When Accelerate or another host provides hooks, use a thin event contract:
 
 - **Before task execution:** resolve project root and expose the `somnus-debug` route plus active doctor config.
 - **After a meaningful Python edit:** record the touched files and schedule/perform a doctor rescan at a coherent validation boundary. Do not scan every intermediate keystroke or partially written file.
-- **Before handoff:** attach final diagnostic report, scan coverage, installed version, native test result, dispositions, and next action to the active packet.
+- **Before handoff:** attach the final diagnostic report, the `delta.py` verdict against the slice baseline, scan coverage, installed version and runner, native test result, dispositions, and next action to the active packet.
 
 The target repository owns semantics. Host automation assembles and persists evidence; it does not change thresholds, claim a pass, or rewrite task acceptance. Avoid installing hooks or daemons until an existing Accelerate/host seam is identified and the project opts into it.

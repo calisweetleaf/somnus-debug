@@ -1,72 +1,68 @@
-# Doctor loop: baseline, repair, rescan, repeat
+# Doctor loop: baseline, change, rescan, delta, triage
 
-This is the core operating protocol. A Python change is not complete merely because an initial `doctor` command ran.
+This is the operating protocol for any Python change in an onboarded repo. Commands come from `.somnus-debug/PROFILE.md`. `sd` below means that profile's runner, for example `PYTHONPATH=../src /repo/.venv/bin/python -m somnus_debug.cli`. Run everything from `.somnus-debug/`.
 
-## 0. Establish authority and coverage
+## 0. Preconditions
 
-- Identify the active project root.
-- Read root `AGENTS.md`, relevant directory instructions, existing tests, CI, and any task packet.
-- Check `somnus-debug --version` and `somnus-debug doctor --help`.
-- Inspect existing `python_doctor.yaml`, `.somnus-debug/` data, and `.python_doctor/` state before generating or replacing anything.
-- If doctor config is absent, initialize a project-local config in a local directory; preserve any config already present. Review and adapt `include_patterns` to actual Python source and tests. Include all in-scope directories and retain ignore rules appropriate to the project.
-- Confirm that the configured scan includes at least one real in-scope Python file. A zero-file run is a setup failure.
+- `PROFILE.md` exists. If not, onboard first ([onboarding](onboarding.md)).
+- The runner still works: `sd --version`. After an install or upgrade, run `scripts/selftest.py` once.
+- If the tree changed shape since onboarding (new package, vendored drop), run `onboard.py <repo>` in plan mode. It rescans and writes nothing.
 
-## 1. Baseline before changes
+## 1. Baseline before the first edit
 
-Run a stateful scan when local SQLite works and the project can retain `.python_doctor/` state. Use report output under a project-local run folder if the reports will be useful to the task. Use `--no-state` and explicit temporary output paths for a disposable one-off; that run cannot participate in history/rollback.
+```console
+sd doctor scan .. -c python_doctor.yaml -o runs/baseline.md --json-output runs/baseline.json
+```
 
-Record:
+Check that `files=` matches what you expect, and that the files you're about to touch are in the report. Keep this baseline for the whole work slice; don't overwrite it mid-task. The baseline is what separates pre-existing findings from findings you introduced.
 
-- version of CLI and config path;
-- files scanned and findings by severity;
-- report paths and whether SQLite state succeeded;
-- existing project gate status, if the task has a relevant baseline.
+## 2. Orient on the code you'll touch
 
-The baseline separates pre-existing findings from regressions introduced by this work.
+Run `sd structure ../path/to/file.py` on unfamiliar or dense files. Read the source and its tests. The index gives you definitions and line spans, not behavior. Look up the baseline's findings for those files in [findings](findings.md). Some are fixable in passing; others are false positives to disposition.
 
-## 2. Orient at the relevant code surface
+## 3. Make the real change and run the real gate
 
-For each task-relevant Python file that is unfamiliar, large, or structurally central, run `somnus-debug structure <file.py>`. Read the actual source and tests around the indexed definitions. The index gives line and definition orientation; it does not establish behavior or data flow by itself.
+Implement the task. Run the project's own tests, build, and acceptance commands. Doctor never substitutes for them.
 
-Do not index every Python file by default. Select files from the task boundary and doctor findings.
+## 4. Rescan and delta
 
-## 3. Triage findings before editing
+```console
+sd doctor scan .. -c python_doctor.yaml -o runs/latest.md --json-output runs/latest.json
+python3 <skill-dir>/scripts/delta.py runs/baseline.json runs/latest.json --dispositions dispositions.json
+```
 
-For each relevant finding, verify it against source and target-project contracts. Classify it as:
+| delta exit | Meaning | Next move |
+|---|---|---|
+| 0 | No new serious or critical findings; coverage intact | Review new minor findings in touched files; continue or close |
+| 1 | New serious or critical finding | Triage each one (step 5) and repeat steps 3–4 |
+| 2 | Coverage regression: zero files, or a baseline file dropped while still on disk | Fix `python_doctor.yaml` coverage first. The other numbers are meaningless until then |
+| 3 | Bad input (missing or invalid report) | Rerun the scan; check paths |
 
-- actionable and in scope;
-- real but outside this task;
-- false positive or misconfigured check;
-- unverified because required inputs or runtime evidence are absent.
+Findings match on category + file + symbol + message, so code that only moved isn't "new". Resolved findings are listed too: report them as progress.
 
-Preserve evidence and reasoning for any disposition. Do not silence a finding by weakening thresholds, excluding the containing tree, or rewriting docs without fixing the underlying issue. If the checker is wrong, document why and keep the project policy intact.
+## 5. Triage
 
-## 4. Make the real change and run the real gate
+For each new finding, and each persisting one in code you touched:
 
-Implement the requested code change. Run the target repository's own tests, build, or acceptance commands as defined by its instructions. Doctor supplements them; it does not substitute for them. If a test harness is absent, do not add one automatically. Use `init-test-harness` only when the project wants the contract and the user-authorized task includes that setup.
+- **Fix it**, if it's real and in scope. See [findings](findings.md) for the real fix and the evasions to avoid.
+- **Disposition it**, if it's a false positive or an accepted design choice. Add `{category, file, symbol, reason}` to `dispositions.json`, as narrow as the evidence allows.
+- **Out of scope**, if it's real but outside this task. Leave it out of the change and mention it in the handoff.
+- **Unverified**, if it needs runtime or input you don't have. Say so.
 
-After meaningful Python edits, re-index the modified or newly coupled files with `structure` when structure review helps verify the change.
-
-## 5. Rescan and compare
-
-Run the same doctor config and scan scope after changes. Preserve a final report when useful. Compare against the baseline and, when SQLite state exists, inspect `somnus-debug doctor history <root> --limit N`.
-
-Check:
-
-- all in-scope actionable baseline findings are addressed or explicitly dispositioned;
-- no new actionable serious/critical finding was introduced;
-- changed file coverage is present in the scan;
-- tool exit status matches the report and configured severity gate;
-- project-native validation passes.
-
-If SQLite failed but reports were written, note that the scan completed statelessly; do not imply history exists. `rollback` is only for report history and should not be used to hide a worse source state.
+Never lower severities or gates, exclude source, or rename around a check to get exit 0.
 
 ## 6. Loop condition
 
-Return to triage and repair if an in-scope finding remains actionable, an iteration adds a new actionable finding, the scan did not cover the edited files, or project validation fails. Repeat the rescan after every meaningful repair batch until the result is stable.
+Repeat steps 3–5 after every repair batch while any of these hold: `delta.py` exits nonzero; a new in-scope finding is untriaged; an edited file is missing from the latest report; or the project's gate fails.
 
-Close when the requested implementation is complete, native gates pass, the final scan is comparable and reviewed, and every in-scope finding is fixed or has a clear evidence-based disposition. Keep unrelated backlog visible without expanding scope indefinitely.
+## 7. Close
 
-## Long-running work
+- Native gate passes.
+- `delta.py` exits 0 (or each remaining new serious finding is explained in the handoff).
+- `dispositions.json` has no stale entries (`delta.py` lists them).
+- `sd doctor history .. -c python_doctor.yaml --limit 5` shows the run trend when state is enabled.
+- The handoff states: CLI version and runner, baseline and latest file and finding counts, the delta verdict, dispositions added (with reasons), and anything unverified.
 
-For a multi-hour session, treat each work slice as another loop iteration: update the baseline/final reports as the actual work changes, keep the same scope/config unless a justified coverage change is recorded, and use doctor history to recover trend. Do not rely on memory of an earlier scan; reopen the report tied to the active slice.
+## Long sessions
+
+Treat each work slice as one loop: a fresh baseline at the start of the slice, the same config throughout. If coverage must change mid-slice, record why, rescan the baseline with the new config, then continue. Don't trust an earlier scan from memory; reopen the report for the active slice.
