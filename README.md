@@ -319,7 +319,7 @@ skills/somnus-debug-fieldkit/ canonical routed agent skill package
 src/somnus_debug/
     cli.py                    `somnus-debug <command>` dispatcher
     doctor/core.py             = old python_production_doctor.py
-    doctor/default_config.yaml = old python_doctor.yaml
+    doctor/default_config.yaml = reference copy of `doctor init-config` output (test-enforced)
     structure/core.py          = old analyze_python_structure.py
     pycache_cleaner/core.py    = old pycache_cleaner.py
     test_harness/scaffold.py + templates/{run_test.py, CONTRACT.md}

@@ -5,20 +5,23 @@ min_docstring_length: 18
 max_cyclomatic_complexity: 12
 max_report_evidence_lines: 5
 include_patterns:
-  - "tools/*.py"
-  - "tools/native/speech/*.py"
-  - "test/*.py"
-  - "test/speech/*.py"
+  - "*.py"
 ignore_patterns:
   - "__pycache__/*"
   - "*.pyc"
   - ".git/*"
+  - ".hg/*"
+  - ".mypy_cache/*"
+  - ".pytest_cache/*"
+  - ".ruff_cache/*"
+  - ".tox/*"
   - ".venv/*"
   - "venv/*"
-  - "potential-project-developments/*"
+  - "env/*"
+  - "node_modules/*"
   - ".python_doctor/*"
-  - "reports/*"
-  - "test/*/runs/*"
+  - "build/*"
+  - "dist/*"
 ignore_functions:
   - "__repr__"
   - "__str__"

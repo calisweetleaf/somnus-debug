@@ -77,6 +77,15 @@ def test_doctor_scan_degrades_when_sqlite_state_is_unavailable(tmp_path: Path) -
     assert (tmp_path / "production_doctor_report.json").exists()
 
 
+def test_packaged_default_config_matches_init_config(tmp_path: Path) -> None:
+    """The packaged reference config must stay identical to what init-config writes."""
+    generated = tmp_path / "generated.yaml"
+    result = _run("doctor", "init-config", "-o", str(generated), cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
+    packaged = REPO_ROOT / "src" / "somnus_debug" / "doctor" / "default_config.yaml"
+    assert packaged.read_text(encoding="utf-8").splitlines() == generated.read_text(encoding="utf-8").splitlines()
+
+
 def test_pycache_clean_help() -> None:
     result = _run("pycache-clean", "--help")
     assert result.returncode == 0

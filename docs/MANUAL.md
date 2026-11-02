@@ -87,10 +87,11 @@ cd /path/to/some/project
 somnus-debug doctor init-config -o python_doctor.yaml
 ```
 
-**Edit `include_patterns` before your first real scan.** The shipped
-default targets `tools/*.py` and `test/*.py` (a Somnus-repo convention) —
-if your project doesn't have those directory names, the scan will come
-back with zero files. Point it at your real source globs, e.g.:
+**Review coverage before your first real scan.** The generated default
+includes every `*.py` under the project root (fnmatch `*` crosses `/`),
+minus standard ignores: VCS, caches, virtualenvs, `node_modules`, `build`,
+and `dist`. Add `ignore_patterns` for vendored, generated, or fixture code,
+or narrow `include_patterns` to your real source globs, e.g.:
 
 ```yaml
 include_patterns:
@@ -276,9 +277,13 @@ contract), it errors out and writes nothing unless you pass `--force`.
 
 ### 7.1 `doctor scan` finds 0 files
 
-Your `include_patterns` doesn't match this project's real layout. The
-shipped default (`tools/*.py`, `test/*.py`) is Somnus-repo-specific, not
-universal. Fix it in your `python_doctor.yaml`.
+Your `include_patterns` doesn't match this project's real layout, or an
+`ignore_patterns` entry prunes it. The generated default (`*.py`) matches
+every Python file, so zero files usually means a copied config with
+Somnus-style globs such as `tools/*.py` and `test/*.py`. This repository's
+root-level `python_doctor.yaml` is one of those pre-packaging leftovers (see
+7.5); it is not the package default. A zero-file scan exits `0`, so check
+`files=` in the summary line. Fix it in your `python_doctor.yaml`.
 
 ### 7.2 `pycache-clean` errors "No roots specified in configuration"
 
@@ -362,7 +367,7 @@ README.md                   short version of this manual
 src/somnus_debug/
     cli.py                   `somnus-debug <command>` dispatcher
     doctor/core.py            = old python_production_doctor.py
-    doctor/default_config.yaml = old python_doctor.yaml
+    doctor/default_config.yaml = reference copy of `doctor init-config` output (test-enforced)
     structure/core.py         = old analyze_python_structure.py
     pycache_cleaner/core.py   = old pycache_cleaner.py
     test_harness/scaffold.py + templates/{run_test.py, CONTRACT.md}

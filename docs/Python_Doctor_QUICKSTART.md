@@ -40,13 +40,16 @@ min_class_lines: 6
 min_docstring_length: 18
 max_cyclomatic_complexity: 12
 include_patterns:
-  - "tools/*.py"
-  - "test/*.py"
+  - "*.py"
 ignore_patterns:
   - "__pycache__/*"
   - "*.pyc"
   - ".git/*"
   - ".venv/*"
+  - "node_modules/*"
+  - ".python_doctor/*"
+  - "build/*"
+  - "dist/*"
 ignore_functions:
   - "__repr__"
   - "__str__"
@@ -188,8 +191,10 @@ anything at all.
 
 **Scan finds 0 files?**
 Check `include_patterns` -- it must actually match your project's real
-source layout (the shipped default targets `tools/*.py` and `test/*.py`,
-which is Somnus-repo-specific, not universal).
+source layout. The generated default (`*.py`) matches everything, so zero
+files usually means a copied config with Somnus-style globs (`tools/*.py`,
+`test/*.py`) or an `ignore_patterns` entry that prunes your source. A
+zero-file scan exits `0`; check `files=` in the summary line.
 
 **Scanning too much / too slow?**
 Tighten `include_patterns`, add more `ignore_patterns`, or raise

@@ -33,8 +33,9 @@ the repository's own AGENTS.md, test commands, or release gates.
 - Before calling Python work production-ready, configure and run
   `somnus-debug doctor scan <project-root>` as one diagnostic input. Do not
   treat a green doctor report as full integration, runtime, or release proof.
-- Inspect `python_doctor.yaml` before the first scan. The shipped defaults use
-  Somnus-style `tools/` and `test/` globs and can otherwise scan zero files.
+- Inspect `python_doctor.yaml` before the first scan. The generated default
+  includes every `*.py`; copied configs with Somnus-style `tools/` and `test/`
+  globs can scan zero files, and a zero-file scan exits `0`.
 - For an unconfigured or disposable project, avoid repository pollution with
   `--no-state`, explicit temporary report paths, and a reviewed config. Normal
   stateful scans create `.python_doctor/` for `history` and `rollback`.
