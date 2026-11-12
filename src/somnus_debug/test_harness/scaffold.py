@@ -1,3 +1,35 @@
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-793a-7576-85fe-bbaa14034b5f"
+#   revision: 1
+#   title: "Scaffold the CONTRACT.md-governed single-test harness into a repository"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-793a-7576-85fe-bbaa14034b5f"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "scaffold-the-contract-md-governed-single-test-harness-into-a-repository"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-793a-7576-85fe-bbaa14034b5f"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """Scaffold the CONTRACT.md-governed single-test harness into a repository.
 
 ``run_test.py`` (see ``templates/run_test.py``) is deliberately NOT an
@@ -56,17 +88,31 @@ def scaffold(target_dir: Path, *, force: bool = False, with_contract: bool = Tru
     return written
 
 
+_EPILOG = """\
+Usage: somnus-debug init-test-harness [target]
+Where to put it: the repository root or any subdirectory of it both work.
+The scaffolded run_test.py infers its project root at run time: $PROJECT_ROOT
+if set, otherwise the nearest directory at or above run_test.py that contains
+.git, pyproject.toml or setup.cfg, otherwise run_test.py's own directory.
+Artifacts go to <project root>/test-runs/<run id>/ (or $SINGLE_TEST_OUTPUT_DIR,
+relative to the project root). Run `python run_test.py --help` for details.
+"""
+
+
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
+    # prog comes from sys.argv[0]: "somnus-debug init-test-harness" under the
+    # dispatcher, "somnus-init-test-harness" as its own console script.
     parser = argparse.ArgumentParser(
-        prog="somnus-debug init-test-harness",
         description="Copy the CONTRACT.md single-test harness (run_test.py) into a target repository.",
+        epilog=_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "target",
         type=Path,
         nargs="?",
         default=Path("."),
-        help="Directory to write run_test.py (and CONTRACT.md) into (default: current directory)",
+        help="Directory to write run_test.py (and CONTRACT.md) into (default: the current directory)",
     )
     parser.add_argument("--force", action="store_true", help="Overwrite existing files at the destination")
     parser.add_argument(
@@ -87,8 +133,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     for path in written:
         print(f"wrote {path}")
     print(
-        "\nNext: edit TEST_NAME and execute_test() in run_test.py for this project. "
-        "See CONTRACT.md for what the harness does and does not own."
+        "\nNext: edit TEST_NAME and execute_test() in run_test.py for this project "
+        "(as shipped it runs the project's pytest suite, or byte-compiles the "
+        "project when there is none). See CONTRACT.md for what the harness does "
+        "and does not own."
     )
     return 0
 

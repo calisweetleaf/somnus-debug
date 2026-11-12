@@ -1,0 +1,10 @@
+import importlib, sys
+mods = ["somnus_debug","somnus_debug.cli","somnus_debug.doctor","somnus_debug.doctor.core","somnus_debug.structure","somnus_debug.structure.core","somnus_debug.pycache_cleaner","somnus_debug.pycache_cleaner.core","somnus_debug.test_harness","somnus_debug.test_harness.scaffold","somnus_debug.test_harness.templates"]
+for m in mods:
+    mod = importlib.import_module(m)
+    al = getattr(mod, "__all__", None)
+    ok = all(hasattr(mod, n) for n in (al or []))
+    print(f"{m:45s} __all__={al} resolved={ok} file={mod.__file__.split('site-packages/')[-1]}")
+import somnus_debug
+print("version", somnus_debug.__version__)
+print("yaml loaded by cli import:", "yaml" in sys.modules)

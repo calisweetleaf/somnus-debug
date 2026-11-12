@@ -1,3 +1,35 @@
+---
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-7698-7596-b4f5-ba2aa21b3183"
+  revision: 1
+  title: "Provenance and version notes"
+  classification:
+    category: "engineering"
+    type: "report"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-7698-7596-b4f5-ba2aa21b3183"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "provenance-and-version-notes"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-7698-7596-b4f5-ba2aa21b3183"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "narrative"
+---
 # Provenance and version notes
 
 **Research date:** 2026-10-11 (America/Chicago)
@@ -6,11 +38,17 @@ This skill was built against the public `calisweetleaf/somnus-debug` repository,
 
 ## Verification basis (2026-11-01)
 
+This is what the original references were checked against.
+
 - `scripts/selftest.py`: 29/29 against the workstation's `somnus-debug` 0.1.0 on PATH, and 29/29 against a fresh `pip install somnus-debug` from PyPI in a clean venv (`--python`).
 - The installed 0.1.0 package, the PyPI 0.1.0 wheel, and the PyPI 0.1.0 sdist are all byte-identical (`diff -r`) to `src/somnus_debug/` at commit `5b6e0c4`. PyPI lists only `0.1.0` (uploaded 2026-09-02). Repository commits after the upload changed docs, README, and the skill, not package code.
 - The sharp edges in `SKILL.md`, the triggers in `findings.md`, and the semantics in `onboarding.md` were read from that source (`CodeQualityVisitor`, `handler_is_silent`, `body_is_stub`, `placeholder_return_kind`, `SECURITY_CALLS`, `TODO_PATTERNS`, `ImportResolver`), plus config loading and matching in `doctor/core.py` (`ConfigManager`, `ProjectFileIndex`), report paths in `StateStore.report_paths`, exit codes in `exit_code_for_summary` and `main`, log location in `setup_logging`, and pycache exclude/roots handling in `pycache_cleaner/core.py`.
 - The repo-root `python_doctor.yaml` there is a pre-packaging leftover (MANUAL §7.5), excluded from the package build and never read by the CLI unless passed with `-c`. Its `tools/*.py`, `test/*.py`, and speech globs come from the Somnus-MCP layout, so it scans zero files against any other tree. Before 2026-11-01, the packaged `src/somnus_debug/doctor/default_config.yaml` and the MANUAL, QUICKSTART, and AGENTS appendix also described those globs as the default, while `init-config` already emitted `*.py`. The packaged file and docs now match `init-config`, and `tests/test_cli_smoke.py::test_packaged_default_config_matches_init_config` enforces it.
 - An earlier private working checkout (pre-rename remote) has the same package code and root scripts. It also holds local operator state (`AGENTS.md`, `PLAN.md`, `STATE.md`, `HANDOFF.md`, `OPSEC.md`) that is intentionally untracked.
+
+## Source fixes after PyPI 0.1.0 (2026-11-11)
+
+The references now describe the repository source after the 2026-11-11 fix series, which is newer than the PyPI 0.1.0 upload. Those fixes changed exit codes (critical findings exit 2 under every gate but `none`, unclassified failures exit 5, a missing root exits 4), detector precision (`silent_failures`, `stubs`, `duplicate_definitions`, `placeholder_returns`, `unused_imports`), `from`-import and `src/` resolution, YAML parsing, `pycache-clean` excludes and validation, and the `onboard.py`/`delta.py` contracts. `selftest.py` passed 30/30 against that source and 25/30 against the pre-fix source, whose package code matches PyPI 0.1.0; the five failures are the fixed behaviors (src layout, `silent_failures`, stubs, property setters, metadata-stamped `structure`). Until a release carries the fixes, an install from PyPI keeps the old behavior. Both report version 0.1.0; run `selftest.py` to tell them apart.
 
 ## Self-scan of the fieldkit scripts (2026-11-01)
 
@@ -26,6 +64,8 @@ The remaining minors are `__future__` import false positives, short helpers, and
 
 ## Version split observed
 
+Tag, package, and repository versions differ; this is the record.
+
 - GitHub's latest tag visible at research time was `v1.5.0`, whose release title is “PyPi Now Published.”
 - The tag points to commit `3ad5e8366ab5d527aa45313a1b535e8912a2dcf3`.
 - PyPI's project page listed the uploaded package as `somnus-debug 0.1.0`, released Sep 2, 2026.
@@ -35,6 +75,8 @@ The remaining minors are `__future__` import false positives, short helpers, and
 For every target codebase, ask the actual installed CLI for `--version` and each command's `--help`. Do not assume the Git tag version equals the package version. If installed behavior differs from this guide, update the guide from the matching current source before relying on an unfamiliar flag.
 
 ## Repository source map
+
+Pinned links into the research snapshot.
 
 | Topic | Source |
 |---|---|

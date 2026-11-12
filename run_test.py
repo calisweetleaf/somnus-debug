@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-7375-7674-a159-5d9f25aafd23"
+#   revision: 1
+#   title: "Agnostic Single-Test Harness"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-7375-7674-a159-5d9f25aafd23"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "agnostic-single-test-harness"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-7375-7674-a159-5d9f25aafd23"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """
 Agnostic Single-Test Harness
 ============================

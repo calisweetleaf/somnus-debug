@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-7264-7196-b9a7-4e36b886c9e3"
+#   revision: 1
+#   title: "pycachecleaner.py"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-7264-7196-b9a7-4e36b886c9e3"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "pycachecleaner-py"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-7264-7196-b9a7-4e36b886c9e3"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """
 pycache_cleaner.py
 ===================

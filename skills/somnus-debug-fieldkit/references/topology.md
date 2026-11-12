@@ -1,8 +1,42 @@
+---
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-76b2-7515-b671-2c2576a5363a"
+  revision: 1
+  title: "Toolkit topology"
+  classification:
+    category: "engineering"
+    type: "report"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-76b2-7515-b671-2c2576a5363a"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "toolkit-topology"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-76b2-7515-b671-2c2576a5363a"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "narrative"
+---
 # Toolkit topology
 
 **Domain:** using `somnus-debug` as a project-agnostic Python developer toolkit from inside a separate codebase.
 
 ## Load-bearing concepts
+
+These seven ideas explain most of the toolkit's behavior.
 
 ### LBC 1 — The command is a dispatcher
 
@@ -10,7 +44,7 @@
 
 ### LBC 2 — Doctor findings are static-analysis evidence
 
-The doctor parses Python source and checks configured patterns for issues such as stubs, placeholder returns, exception handling, cycles, missing documentation or hints, TODOs, and security-risk calls. It does not execute the target code. It resolves imports with `find_spec` in its own interpreter, so where it runs changes the results. `test_gaps` is configurable but never emitted in 0.1.0. Findings need interpretation ([findings](findings.md)) and project-native validation.
+The doctor parses Python source and checks configured patterns for issues such as stubs, placeholder returns, exception handling, cycles, missing documentation or hints, TODOs, and security-risk calls. It does not execute the target code. It resolves third-party imports with `find_spec` in its own interpreter, so where it runs changes the results; the project's own packages, including those under `src/`, resolve from the scanned files. `test_gaps` is configurable but never emitted in 0.1.0. Findings need interpretation ([findings](findings.md)) and project-native validation.
 
 ### LBC 3 — Include patterns define what exists to the scan
 
@@ -34,20 +68,24 @@ The scaffolded one-test surface defines artifact semantics and acceptance for on
 
 ## Interface map
 
+Each surface's inputs, outputs, and limits.
+
 | Surface | Receives | Produces / changes | Boundary |
 |---|---|---|---|
 | `doctor scan` | Project root + doctor YAML + optional output paths | Markdown/JSON findings; `.python_doctor/` state unless `--no-state` | Python diagnostics, not full correctness proof |
 | `doctor history` | Root/config + limit | Prior run summaries from local SQLite | Requires usable stored state |
-| `doctor rollback` | Root/config + run ID | Restores an earlier report as latest | Does not revert source code |
+| `doctor rollback` | Root/config + run ID | Repoints the `latest` alias and `reports/latest.*` to an earlier run | Does not revert source code or `-o` reports |
 | `doctor self-check` | Installed toolkit | Doctor's self-check scan and report | Checks doctor behavior against its own package |
 | `structure` | One `.py` file | Definition index to stdout or file | AST only; one file at a time |
 | `pycache-clean` | YAML roots/targets/excludes + dry-run choice | Dry-run plan or cache deletion | Destructive when live |
 | `init-test-harness` | Target directory + overwrite flags | Project-owned `run_test.py`, optionally `CONTRACT.md` | Refuses overwrite unless `--force` |
-| `scripts/onboard.py` | Repo root | `.somnus-debug/` profile, coverage proof, baseline | Never overwrites; plan mode writes nothing |
-| `scripts/delta.py` | Two doctor JSON reports + dispositions | New/resolved/persisting findings, coverage verdict, exit 0/1/2/3 | Reads only |
-| `scripts/selftest.py` | Installed CLI | 29 PASS/FAIL contract checks | Temp dir only |
+| `scripts/onboard.py` | Repo root | `.somnus-debug/` profile, coverage proof, baseline | Never overwrites, except the baseline with `--force-baseline`; plan mode writes nothing |
+| `scripts/delta.py` | Two doctor JSON reports with the same `config_hash` + dispositions | New/resolved/persisting findings, coverage verdict, exit 0/1/2/3 | Reads only |
+| `scripts/selftest.py` | Installed CLI | 30 PASS/FAIL contract checks | Temp dir only |
 
 ## Dependency and flow map
+
+How the CLI, the agent, and the project's own gates feed each other.
 
 ```mermaid
 flowchart TD
@@ -66,6 +104,8 @@ flowchart TD
 
 ## Complexity distribution
 
+Where to slow down.
+
 | Surface | Density | Slow down because |
 |---|---|---|
 | Doctor config and coverage | DENSE | Incorrect include patterns can produce a convincing empty scan. |
@@ -77,6 +117,8 @@ flowchart TD
 
 ## Anti-concepts
 
+What each result is not.
+
 | Looks like | Actual boundary |
 |---|---|
 | A clean doctor exit | The configured severity gate passed; other correctness gates remain. |
@@ -86,9 +128,11 @@ flowchart TD
 | `init-test-harness` | Optional project-owned test scaffold, not a required Accelerate installation. |
 | A config that includes no files | Invalid coverage for the current task, not a passing scan. |
 | No `test_gaps` findings | 0.1.0 never emits them; doctor says nothing about test coverage. |
-| A `missing_imports` flood | Doctor runs outside the project env, or a `src/` layout without `PYTHONPATH=src`. |
+| A `missing_imports` flood | Doctor runs outside the project env, so third-party dependencies are not importable from its interpreter. |
 
 ## Entry vectors
+
+Where to start for each kind of task.
 
 - **Cold repo:** read target instructions → check CLI/version → look for `.somnus-debug/PROFILE.md` → if absent, `scripts/onboard.py` plan then `--apply --baseline` ([onboarding](onboarding.md)) → add the AGENTS block.
 - **Python implementation task:** read doctor loop → baseline → inspect touched files with `structure` → implement → native validation → rescan → `delta.py` → triage with `findings.md` → repeat.

@@ -1,0 +1,12 @@
+from pathlib import Path
+from somnus_debug.test_harness.scaffold import scaffold, _template_text
+w = scaffold(Path("ex7/repo"))
+print("scaffold returned:", [str(p) for p in w])
+w2 = scaffold(Path("ex7/repo/single_test"), with_contract=False)
+print("no-contract returned:", [str(p) for p in w2])
+try: scaffold(Path("ex7/repo"))
+except FileExistsError as e: print("FileExistsError:", str(e)[:80])
+print("forced:", len(scaffold(Path("ex7/repo"), force=True)))
+t = _template_text("run_test.py")
+print("template TEST_NAME line:", [l for l in t.splitlines() if l.startswith("TEST_NAME")])
+print("template invokes cargo:", "\"cargo\"" in t)

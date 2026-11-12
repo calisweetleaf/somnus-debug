@@ -1,3 +1,35 @@
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-7793-758e-9cd9-3639d82d14e5"
+#   revision: 1
+#   title: "Unified dispatcher for the somnus-debug toolkit"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-7793-758e-9cd9-3639d82d14e5"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "unified-dispatcher-for-the-somnus-debug-toolkit"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-7793-758e-9cd9-3639d82d14e5"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """Unified dispatcher for the somnus-debug toolkit.
 
 Each tool in this package (`doctor`, `structure`, `pycache-clean`,
@@ -10,26 +42,32 @@ of sync with the real one.
 
 Installed as the ``somnus-debug`` console script. Individual tools are also
 installed as their own scripts (``somnus-doctor``, ``somnus-structure``,
-``somnus-pycache-clean``) for muscle-memory / CI-script compatibility with
-how they were invoked before packaging.
+``somnus-pycache-clean``, ``somnus-init-test-harness``) for muscle-memory /
+CI-script compatibility with how they were invoked before packaging.
+
+Each tool is imported only when its subcommand runs, so a missing optional
+runtime dependency of one tool (PyYAML, needed only by ``pycache-clean``)
+does not break the others.
 """
 
 from __future__ import annotations
 
+import importlib
 import sys
-from typing import Sequence
+from typing import Callable, Sequence
 
 from . import __version__
-from .doctor.core import main as _doctor_main
-from .pycache_cleaner.core import main as _pycache_main
-from .structure.core import main as _structure_main
-from .test_harness.scaffold import main as _scaffold_main
 
+# subcommand -> (program name shown in its help, module, entry-point attribute)
 _SUBCOMMANDS = {
-    "doctor": ("somnus-debug doctor", _doctor_main),
-    "structure": ("somnus-debug structure", _structure_main),
-    "pycache-clean": ("somnus-debug pycache-clean", _pycache_main),
-    "init-test-harness": ("somnus-debug init-test-harness", _scaffold_main),
+    "doctor": ("somnus-debug doctor", "somnus_debug.doctor.core", "main"),
+    "structure": ("somnus-debug structure", "somnus_debug.structure.core", "main"),
+    "pycache-clean": ("somnus-debug pycache-clean", "somnus_debug.pycache_cleaner.core", "main"),
+    "init-test-harness": (
+        "somnus-debug init-test-harness",
+        "somnus_debug.test_harness.scaffold",
+        "main",
+    ),
 }
 
 _TOP_LEVEL_HELP = f"""\
@@ -46,7 +84,8 @@ Commands:
 
 Each command owns its own --help; run e.g. `somnus-debug doctor --help`.
 Every command is also installed as its own script (somnus-doctor,
-somnus-structure, somnus-pycache-clean).
+somnus-structure, somnus-pycache-clean, somnus-init-test-harness).
+pycache-clean additionally requires PyYAML.
 """
 
 
@@ -60,11 +99,22 @@ def _run_subcommand(name: str, argv: Sequence[str]) -> int:
     args), so both calling conventions behave identically to running the
     original script.
     """
-    prog, entry_point = _SUBCOMMANDS[name]
+    prog, module_name, attribute = _SUBCOMMANDS[name]
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as exc:
+        if exc.name == "yaml":
+            print(
+                f"somnus-debug: {name} requires PyYAML. Install it via `pip install pyyaml`.",
+                file=sys.stderr,
+            )
+            return 1
+        raise
+    entry_point: Callable[[list[str]], object] = getattr(module, attribute)
     old_argv = sys.argv
     sys.argv = [prog, *argv]
     try:
-        result = entry_point(list(argv)) if name != "pycache-clean" else entry_point()
+        result = entry_point(list(argv))
     except SystemExit as exc:
         return int(exc.code) if isinstance(exc.code, int) else 1
     finally:

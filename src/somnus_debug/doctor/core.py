@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-77ed-7471-9c44-2afdc4099774"
+#   revision: 1
+#   title: "Python Production Doctor diagnoses Python project readiness without modifying source code"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-77ed-7471-9c44-2afdc4099774"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "python-production-doctor-diagnoses-python-project-readiness-without-modifying-so"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-77ed-7471-9c44-2afdc4099774"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """Python Production Doctor diagnoses Python project readiness without modifying source code.
 
 Modified: 2026-06-08
@@ -20,6 +52,7 @@ import argparse
 import ast
 import concurrent.futures
 import datetime as dt
+import difflib
 import fnmatch
 import hashlib
 import html
@@ -32,9 +65,10 @@ import re
 import shutil
 import sqlite3
 import sys
+import threading
 import tokenize
 from collections import Counter, defaultdict
-from dataclasses import dataclass, fields, is_dataclass
+from dataclasses import dataclass, fields, is_dataclass, replace
 from enum import Enum
 from pathlib import Path
 from typing import Iterable, Literal, Mapping, MutableMapping, Sequence, TypeAlias
@@ -479,6 +513,9 @@ TODO_PATTERNS: tuple[tuple[str, str], ...] = (
 )
 
 PLACEHOLDER_CONSTANTS: tuple[object, ...] = (None, False, True, 0, -1, "")
+ABSTRACT_DECORATORS: frozenset[str] = frozenset({"abstractmethod", "abc.abstractmethod", "abstractproperty", "abc.abstractproperty"})
+OVERLOAD_DECORATORS: frozenset[str] = frozenset({"overload", "typing.overload"})
+LOG_METHODS: frozenset[str] = frozenset({"error", "exception", "critical", "warning", "warn", "log"})
 SECURITY_CALLS: frozenset[str] = frozenset({"eval", "exec", "compile", "pickle.load", "pickle.loads", "subprocess.call", "subprocess.run", "subprocess.Popen", "os.system", "os.popen", "yaml.load", "marshal.load", "marshal.loads"})
 
 SOMNUS_MARKDOWN_STYLE = """<style>
@@ -561,31 +598,84 @@ def table_escape(value: object) -> str:
     return str(value).replace("\n", " ").replace("|", "\\|").strip()
 
 
+YAML_TOKEN_START = frozenset(" \t[{,:")
+
+
+def _yaml_quote_end(text: str, start: int) -> int:
+    """Return the index of the quote closing the quoted scalar opened at ``start``, or -1.
+
+    Double quotes honor backslash escapes; single quotes honor the YAML ``''`` escape.
+    """
+    quote = text[start]
+    index = start + 1
+    while index < len(text):
+        char = text[index]
+        if quote == '"' and char == "\\":
+            index += 2
+            continue
+        if char == quote:
+            if quote == "'" and index + 1 < len(text) and text[index + 1] == "'":
+                index += 2
+                continue
+            return index
+        index += 1
+    return -1
+
+
+def _yaml_scan(text: str) -> Iterable[tuple[int, str, bool]]:
+    """Yield (index, char, quoted) for text, skipping over quoted scalars as one unit.
+
+    A quote opens a quoted scalar only at the start of a token (line start, or after
+    whitespace or one of ``[{,:``), so an apostrophe inside a plain scalar stays plain.
+    """
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char in {'"', "'"} and (index == 0 or text[index - 1] in YAML_TOKEN_START):
+            close = _yaml_quote_end(text, index)
+            if close != -1:
+                yield index, text[index : close + 1], True
+                index = close + 1
+                continue
+        yield index, char, False
+        index += 1
+
+
 def strip_yaml_comment(line: str) -> str:
-    """Remove YAML comments outside quoted strings."""
-    in_single = False
-    in_double = False
-    escaped = False
-    for index, char in enumerate(line):
-        if escaped:
-            escaped = False
-            continue
-        if char == "\\" and in_double:
-            escaped = True
-            continue
-        if char == "'" and not in_double:
-            in_single = not in_single
-            continue
-        if char == '"' and not in_single:
-            in_double = not in_double
-            continue
-        if char == "#" and not in_single and not in_double:
+    """Remove a YAML comment: ``#`` at line start or after whitespace, outside quotes."""
+    for index, char, quoted in _yaml_scan(line):
+        if not quoted and char == "#" and (index == 0 or line[index - 1] in " \t"):
             return line[:index]
     return line
 
 
+def split_flow_items(inner: str) -> list[str]:
+    """Split the inside of a flow sequence on commas outside quotes and nested brackets."""
+    items: list[str] = []
+    depth = 0
+    start = 0
+    for index, char, quoted in _yaml_scan(inner):
+        if quoted:
+            continue
+        if char in "[{":
+            depth += 1
+        elif char in "]}":
+            depth -= 1
+        elif char == "," and depth == 0:
+            items.append(inner[start:index])
+            start = index + 1
+    items.append(inner[start:])
+    return items
+
+
 def parse_yaml_scalar(value: str, line_number: int) -> JsonValue:
-    """Parse one scalar or inline sequence from the native YAML subset."""
+    """Parse one scalar, inline sequence, or empty inline mapping from the native YAML subset.
+
+    Integers follow a decimal-only rule: ``0`` or a non-zero digit followed by digits.
+    A leading-zero literal such as ``010`` is kept as the string ``"010"``: YAML 1.1 reads
+    it as octal 8 and YAML 1.2 as decimal 10, so the parser refuses to guess and an
+    integer setting given that way fails validation loudly instead of taking a wrong value.
+    """
     text = value.strip()
     if text == "":
         return ""
@@ -594,7 +684,12 @@ def parse_yaml_scalar(value: str, line_number: int) -> JsonValue:
         return lowered == "true"
     if lowered in {"null", "none", "~"}:
         return None
-    if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+    if len(text) >= 2 and text.startswith("'") and text.endswith("'"):
+        inner = text[1:-1]
+        if not re.fullmatch(r"(?:[^']|'')*", inner):
+            raise ConfigurationError("Invalid quoted YAML scalar.", {"line": line_number, "value": text, "error": "unescaped single quote inside single-quoted scalar; write it as ''"})
+        return inner.replace("''", "'")
+    if len(text) >= 2 and text.startswith('"') and text.endswith('"'):
         try:
             return ast.literal_eval(text)
         except (SyntaxError, ValueError) as error:
@@ -603,12 +698,31 @@ def parse_yaml_scalar(value: str, line_number: int) -> JsonValue:
         inner = text[1:-1].strip()
         if not inner:
             return []
-        return [parse_yaml_scalar(part.strip(), line_number) for part in inner.split(",") if part.strip()]
-    if re.fullmatch(r"[-+]?\d+", text):
+        return [parse_yaml_scalar(part.strip(), line_number) for part in split_flow_items(inner) if part.strip()]
+    if text.startswith("{") and text.endswith("}") and not text[1:-1].strip():
+        return {}
+    if re.fullmatch(r"[-+]?(?:0|[1-9]\d*)", text):
         return int(text)
     if re.fullmatch(r"[-+]?\d+\.\d+", text):
         return float(text)
     return text
+
+
+def split_yaml_key(content: str, line_number: int) -> tuple[str, str] | None:
+    """Split a mapping line into (key, raw value); quoted keys are unquoted. None if no key."""
+    if content[:1] in {'"', "'"}:
+        close = _yaml_quote_end(content, 0)
+        if close == -1:
+            return None
+        rest = content[close + 1 :].lstrip()
+        if not rest.startswith(":"):
+            return None
+        key = parse_yaml_scalar(content[: close + 1], line_number)
+        return (key, rest[1:]) if isinstance(key, str) and key else None
+    key, separator, raw_value = content.partition(":")
+    if separator != ":" or not key.strip():
+        return None
+    return key.strip(), raw_value
 
 
 class MinimalYamlParser:
@@ -621,7 +735,8 @@ class MinimalYamlParser:
     def parse(self) -> JsonObject:
         """Parse YAML file and return a JSON-safe mapping."""
         try:
-            raw_lines = self.path.read_text(encoding="utf-8").splitlines()
+            text = self.path.read_text(encoding="utf-8")
+            raw_lines = (text[1:] if text.startswith("\ufeff") else text).splitlines()
         except OSError as error:
             raise ConfigurationError("Unable to read configuration file.", {"path": str(self.path), "os_error": str(error)}) from error
         lines = self._prepare_lines(raw_lines)
@@ -672,15 +787,16 @@ class MinimalYamlParser:
                 container = {}
             if not isinstance(container, dict):
                 raise ConfigurationError("Cannot mix mapping keys with sequence items.", {"path": str(self.path), "line": line.number})
-            key, separator, raw_value = line.content.partition(":")
-            if separator != ":" or not key.strip():
+            split = split_yaml_key(line.content, line.number)
+            if split is None:
                 raise ConfigurationError("Expected key followed by colon.", {"path": str(self.path), "line": line.number, "content": line.content})
+            key, raw_value = split
             if raw_value.strip() == "":
                 value, index = self._parse_child(lines, index, indent, line.number)
             else:
                 value = parse_yaml_scalar(raw_value.strip(), line.number)
                 index += 1
-            container[key.strip()] = value
+            container[key] = value
         return (container if container is not None else {}), index
 
     def _parse_child(self, lines: Sequence[YamlLine], index: int, indent: int, line_number: int) -> tuple[JsonValue, int]:
@@ -747,6 +863,27 @@ def parse_severities(raw: JsonValue) -> Mapping[str, Severity]:
     return parsed
 
 
+def warn_unknown_config_keys(loaded: Mapping[str, JsonValue], config_path: Path) -> None:
+    """Warn on stderr about unknown top-level keys and severity categories (not fatal).
+
+    Each warning names the key and, when one is close, the valid key it most likely means.
+    """
+    checks: list[tuple[str, Iterable[object], Sequence[str]]] = [("configuration key", loaded.keys(), sorted(DEFAULT_CONFIG_DATA))]
+    severities = loaded.get("severity_levels")
+    default_severities = DEFAULT_CONFIG_DATA["severity_levels"]
+    if isinstance(severities, dict) and isinstance(default_severities, dict):
+        checks.append(("severity category", severities.keys(), sorted(default_severities)))
+    for label, keys, valid in checks:
+        for key in keys:
+            if key in valid:
+                continue
+            close = difflib.get_close_matches(str(key), valid, n=1)
+            hint = f"; did you mean '{close[0]}'?" if close else "; it has no effect."
+            message = f"Warning: unknown {label} '{key}' in {config_path}{hint}"
+            logging.getLogger(LOGGER_NAME).warning(message)
+            print(message, file=sys.stderr)
+
+
 class ConfigManager:
     """Loads, validates, and exposes YAML-first configuration."""
 
@@ -756,6 +893,30 @@ class ConfigManager:
         self.raw_config = self._load_raw(config_path)
         self.config = self._validate(self.raw_config)
         self.config_hash = stable_hash_text(dumps_json(self.raw_config))
+
+    def replace(self, **changes: object) -> DoctorConfig:
+        """Replace DoctorConfig fields, validating the result and recomputing config_hash.
+
+        Each keyword names a DoctorConfig field and replaces its whole value (a
+        severity_levels mapping replaces the mapping). Invalid values or unknown fields
+        raise ConfigurationError and leave the manager unchanged. Assigning ``config``
+        directly still bypasses validation and the hash (D-34).
+
+        Returns:
+            The new validated configuration, also stored on ``self.config``.
+        """
+        known = {field.name for field in fields(DoctorConfig)}
+        unknown = sorted(set(changes) - known)
+        if unknown:
+            raise ConfigurationError("Unknown configuration field in replace().", {"fields": unknown})
+        raw = dict(self.raw_config)
+        for key, value in changes.items():
+            raw[key] = to_json_value(value)
+        config = self._validate(raw)
+        self.raw_config = raw
+        self.config = config
+        self.config_hash = stable_hash_text(dumps_json(raw))
+        return config
 
     def severity(self, category: str) -> Severity:
         """Return configured severity for a category."""
@@ -776,14 +937,20 @@ class ConfigManager:
                 raise ConfigurationError("Unable to read JSON configuration.", {"path": str(config_path), "os_error": str(error)}) from error
             if not isinstance(loaded, dict):
                 raise ConfigurationError("JSON configuration root must be an object.", {"path": str(config_path)})
+            warn_unknown_config_keys(loaded, config_path)
             return deep_merge(DEFAULT_CONFIG_DATA, loaded)
         if config_path.suffix.lower() in {".yaml", ".yml"}:
-            return deep_merge(DEFAULT_CONFIG_DATA, MinimalYamlParser(config_path).parse())
+            loaded_yaml = MinimalYamlParser(config_path).parse()
+            warn_unknown_config_keys(loaded_yaml, config_path)
+            return deep_merge(DEFAULT_CONFIG_DATA, loaded_yaml)
         raise ConfigurationError("Configuration path must end with .yaml, .yml, or .json.", {"path": str(config_path)})
 
     def _validate(self, data: JsonObject) -> DoctorConfig:
         """Validate raw mapping into DoctorConfig."""
-        gate = require_str(data, "severity_exit_level")
+        if not data.get("include_patterns") and isinstance(data.get("include_patterns"), list):
+            raise ConfigurationError("include_patterns must list at least one pattern; an empty list scans no files.", {"key": "include_patterns"})
+        # Bare none/null/~ reach here as YAML null; treat null as the "none" gate (D-03).
+        gate = "none" if data.get("severity_exit_level") is None else require_str(data, "severity_exit_level")
         if gate not in {"critical", "serious", "minor", "info", "none"}:
             raise ConfigurationError("Invalid severity_exit_level.", {"value": gate})
         return DoctorConfig(
@@ -891,6 +1058,31 @@ severity_levels:
 """
 
 
+def glob_variants(pattern: str) -> tuple[str, ...]:
+    """Expand ``**/`` so it matches zero or more directories.
+
+    fnmatch's ``*`` already crosses ``/``, so ``**/`` matches one or more directories;
+    each variant drops one or more ``**/`` occurrences to cover the zero-directory case.
+    """
+    variants = {pattern}
+    pending = [pattern]
+    while pending:
+        current = pending.pop()
+        start = current.find("**/")
+        while start != -1:
+            reduced = current[:start] + current[start + 3 :]
+            if reduced not in variants:
+                variants.add(reduced)
+                pending.append(reduced)
+            start = current.find("**/", start + 1)
+    return tuple(sorted(variants))
+
+
+def glob_match(path_text: str, pattern: str) -> bool:
+    """Match a POSIX path against a glob where ``**/`` spans zero or more directories."""
+    return any(fnmatch.fnmatch(path_text, variant) for variant in glob_variants(pattern))
+
+
 class ProjectFileIndex:
     """Indexes Python files and importable module names for a project."""
 
@@ -900,7 +1092,13 @@ class ProjectFileIndex:
         self.config = config
         self.python_files = self._discover()
         self.module_to_file = self._modules(self.python_files)
-        self.file_to_module = {path: module for module, path in self.module_to_file.items()}
+        self.file_to_module: dict[Path, str] = {}
+        for module, path in self.module_to_file.items():
+            known = self.file_to_module.get(path)
+            if known is None or len(module) < len(known):
+                self.file_to_module[path] = module
+        self._bound_names: dict[Path, frozenset[str] | None] = {}
+        self._bound_lock = threading.Lock()
 
     def should_ignore(self, path: Path) -> bool:
         """Return true when path matches ignore configuration."""
@@ -908,7 +1106,7 @@ class ProjectFileIndex:
         parts = set(rel.split("/"))
         for pattern in self.config.ignore_patterns:
             normalized = pattern.replace("\\", "/")
-            if fnmatch.fnmatch(rel, normalized) or fnmatch.fnmatch(path.name, normalized):
+            if glob_match(rel, normalized) or fnmatch.fnmatch(path.name, normalized):
                 return True
             if normalized.endswith("/*") and normalized[:-2] in parts:
                 return True
@@ -917,7 +1115,7 @@ class ProjectFileIndex:
     def should_include(self, path: Path) -> bool:
         """Return true when path matches include configuration."""
         rel = safe_relpath(path, self.project_root)
-        return any(fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(path.name, pattern) for pattern in self.config.include_patterns)
+        return any(glob_match(rel, pattern) or fnmatch.fnmatch(path.name, pattern) for pattern in self.config.include_patterns)
 
     def module_for_file(self, path: Path) -> str:
         """Return best importable module name for a file."""
@@ -950,14 +1148,88 @@ class ProjectFileIndex:
         return tuple(sorted(found, key=lambda item: safe_relpath(item, self.project_root)))
 
     def _modules(self, python_files: Sequence[Path]) -> dict[str, Path]:
-        """Build module-name to file-path mapping."""
+        """Build module-name to file-path mapping.
+
+        In a src-layout project (``<root>/src`` is a directory) files under ``src/`` are
+        also indexed without the ``src.`` prefix, so absolute imports of the project's own
+        packages resolve locally whatever PYTHONPATH the doctor runs with (D-22).
+        """
         modules: dict[str, Path] = {}
+        src_layout = (self.project_root / "src").is_dir()
+        aliases: dict[str, Path] = {}
         for path in python_files:
             rel = path.relative_to(self.project_root)
             parts = rel.parent.parts if rel.name == "__init__.py" else rel.with_suffix("").parts
             if parts:
                 modules[".".join(parts)] = path
+                if src_layout and parts[0] == "src" and len(parts) > 1:
+                    aliases[".".join(parts[1:])] = path
+        for module, path in aliases.items():
+            modules.setdefault(module, path)
         return modules
+
+    def module_binds_name(self, path: Path, name: str) -> bool:
+        """Return whether a local module binds ``name`` at module level.
+
+        Unreadable or unparseable modules, star imports, and a module-level ``__getattr__``
+        count as binding every name, so only a provably absent name returns False.
+        """
+        with self._bound_lock:
+            cached = self._bound_names.get(path, ())
+        if cached == ():
+            cached = module_level_bound_names(path)
+            with self._bound_lock:
+                self._bound_names[path] = cached
+        return cached is None or name in cached
+
+
+def module_level_bound_names(path: Path) -> frozenset[str] | None:
+    """Collect names bound at module level of a source file; None means "any name"."""
+    try:
+        with tokenize.open(path) as handle:
+            tree = ast.parse(handle.read(), filename=str(path))
+    except (OSError, SyntaxError, UnicodeDecodeError, ValueError):
+        return None
+    names: set[str] = set()
+    pending: list[ast.stmt] = list(tree.body)
+    while pending:
+        statement = pending.pop()
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            if statement.name == "__getattr__":
+                return None
+            names.add(statement.name)
+        elif isinstance(statement, ast.Import):
+            names.update(alias.asname or alias.name.split(".")[0] for alias in statement.names)
+        elif isinstance(statement, ast.ImportFrom):
+            for alias in statement.names:
+                if alias.name == "*":
+                    return None
+                names.add(alias.asname or alias.name)
+        elif isinstance(statement, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.For, ast.AsyncFor, ast.With, ast.AsyncWith)):
+            targets: list[ast.AST] = []
+            if isinstance(statement, ast.Assign):
+                targets = list(statement.targets)
+            elif isinstance(statement, (ast.AnnAssign, ast.AugAssign, ast.For, ast.AsyncFor)):
+                targets = [statement.target]
+            else:
+                targets = [item.optional_vars for item in statement.items if item.optional_vars is not None]
+            for target in targets:
+                names.update(node.id for node in ast.walk(target) if isinstance(node, ast.Name))
+        for field in ("body", "orelse", "finalbody", "handlers"):
+            for child in getattr(statement, field, None) or ():
+                if isinstance(child, ast.ExceptHandler):
+                    if child.name:
+                        names.add(child.name)
+                    pending.extend(child.body)
+                elif isinstance(child, ast.stmt) and not isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    pending.append(child)
+        if isinstance(statement, ast.Match):
+            for case in statement.cases:
+                pending.extend(case.body)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+            names.add(node.target.id)
+    return frozenset(names)
 
 
 class ImportResolver:
@@ -967,6 +1239,43 @@ class ImportResolver:
         """Initialize resolver with project index."""
         self.index = index
         self.stdlib = set(getattr(sys, "stdlib_module_names", frozenset())) | set(sys.builtin_module_names)
+
+    def resolve_all(self, source_path: Path, record: ImportRecord) -> tuple[ImportEdge, ...]:
+        """Resolve one import record into one edge per distinct local target.
+
+        For ``from X import name`` each name is first tried as the local submodule
+        ``X.name``; only names that are not submodules fall back to X itself (D-06). When X
+        is a local package and such a name is neither a submodule nor bound in its
+        ``__init__``, the name is reported as a missing import.
+        """
+        module_name = self._absolute_module(source_path, record)
+        if record.kind != "from_import" or module_name == "" or not record.imported_names:
+            return (self.resolve(source_path, record),)
+        source = safe_relpath(source_path, self.index.project_root)
+        edges: list[ImportEdge] = []
+        remaining: list[str] = []
+        for imported in record.imported_names:
+            child = self.index.resolve_local_module(f"{module_name}.{imported}")
+            if child:
+                edges.append(ImportEdge(source, f"{module_name}.{imported}", record.line_number, "local", "resolved", safe_relpath(child, self.index.project_root), 1.0, record.raw))
+            else:
+                remaining.append(imported)
+        if not remaining:
+            return tuple(edges)
+        package = self.index.resolve_local_module(module_name)
+        if package is not None and package.name == "__init__.py":
+            absent = [name for name in remaining if not self.index.module_binds_name(package, name)]
+            for name in absent:
+                edges.append(ImportEdge(source, f"{module_name}.{name}", record.line_number, "missing", "name is neither a submodule nor bound in the local package __init__", "", 0.9, record.raw))
+            if len(absent) == len(remaining):
+                return tuple(edges)
+        if package is not None:
+            edges.append(ImportEdge(source, module_name, record.line_number, "local", "resolved", safe_relpath(package, self.index.project_root), 1.0, record.raw))
+            return tuple(edges)
+        if edges:
+            fallback = self.resolve(source_path, ImportRecord(record.module, tuple(remaining), record.bound_names, record.line_number, record.column_offset, record.level, record.kind, record.raw))
+            return (*edges, fallback)
+        return (self.resolve(source_path, record),)
 
     def resolve(self, source_path: Path, record: ImportRecord) -> ImportEdge:
         """Resolve one import record into an ImportEdge."""
@@ -1087,6 +1396,25 @@ class ImportCollector(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+def dunder_all_names(tree: ast.AST) -> set[str]:
+    """Return string names listed in module-level ``__all__`` (=, +=, annotated, extend/append)."""
+    names: set[str] = set()
+    for statement in getattr(tree, "body", []):
+        value: ast.AST | None = None
+        if isinstance(statement, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "__all__" for target in statement.targets):
+            value = statement.value
+        elif isinstance(statement, (ast.AugAssign, ast.AnnAssign)) and isinstance(statement.target, ast.Name) and statement.target.id == "__all__":
+            value = statement.value
+        elif isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call) and dotted_name(statement.value.func) in {"__all__.extend", "__all__.append"}:
+            value = ast.List(elts=list(statement.value.args), ctx=ast.Load())
+        if value is None:
+            continue
+        for node in ast.walk(value):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                names.add(node.value)
+    return names
+
+
 class LoadedNameCollector(ast.NodeVisitor):
     """Collects loaded names while skipping import binding sites."""
 
@@ -1124,6 +1452,7 @@ class CodeQualityVisitor(ast.NodeVisitor):
         self.abstract_methods: dict[str, set[str]] = {}
         self.concrete_methods: dict[str, set[str]] = {}
         self.class_bases: dict[str, tuple[str, ...]] = {}
+        self.protocol_classes: set[str] = set()
 
     def analyze(self, tree: ast.AST) -> tuple[tuple[DiagnosticIssue, ...], tuple[FunctionDiagnostic, ...], tuple[ClassDiagnostic, ...]]:
         """Analyze tree and return issues, functions, and classes."""
@@ -1157,11 +1486,13 @@ class CodeQualityVisitor(ast.NodeVisitor):
             bases=bases,
             decorators=decorators,
             has_docstring=meaningful_doc(node, self.config.min_docstring_length),
-            is_dataclass=any(name.endswith("dataclass") or name == "dataclass" for name in decorators),
+            is_dataclass=any(name.endswith("dataclass") for name in decorator_names(node)),
             is_exception=any(base.endswith("Error") or base.endswith("Exception") for base in bases) or node.name.endswith("Error"),
             is_enum=any(base.endswith("Enum") for base in bases),
         )
         self.classes.append(info)
+        if any(dotted_name(base.value if isinstance(base, ast.Subscript) else base).split(".")[-1] == "Protocol" for base in node.bases):
+            self.protocol_classes.add(qualname)
         self.class_bases[qualname] = bases
         self.abstract_methods[qualname] = self._abstract_methods(node)
         self.concrete_methods[qualname] = {item.name for item in node.body if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))}
@@ -1200,12 +1531,17 @@ class CodeQualityVisitor(ast.NodeVisitor):
 
     def _visit_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef, kind: str) -> None:
         """Analyze one function-like node."""
-        if self._inside_function() and not self.config.check_nested_functions:
-            return
-        if node.name in self.config.ignore_functions:
+        if (self._inside_function() and not self.config.check_nested_functions) or node.name in self.config.ignore_functions:
+            self._security_only(node)
             return
         if not self.config.check_private_functions and is_private_function(node.name):
+            self.definition_stack[-1][node.name].append(node)
+            self.scope_stack.append(node.name)
+            self.definition_stack.append(defaultdict(list))
             self.generic_visit(node)
+            self._check_duplicates()
+            self.definition_stack.pop()
+            self.scope_stack.pop()
             return
         qualname = self._qualname(node.name)
         self.definition_stack[-1][node.name].append(node)
@@ -1234,6 +1570,21 @@ class CodeQualityVisitor(ast.NodeVisitor):
         self.definition_stack.pop()
         self.scope_stack.pop()
 
+    def _security_only(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        """Report security_risks inside a function whose other checks are skipped.
+
+        ignore_functions and check_nested_functions: false are skip settings, not
+        severity filters, so high-risk calls in those bodies stay visible (D-16, D-30).
+        """
+        if not self.config.detect_security_risks:
+            return
+        symbol = self._qualname(node.name)
+        for child in ast.walk(node):
+            if isinstance(child, ast.Call):
+                name = dotted_name(child.func)
+                if name in SECURITY_CALLS:
+                    self.issues.append(self.issue_factory.create("security_risks", child.lineno, child.col_offset, symbol, f"High-risk call detected: {name}.", "Replace dynamic execution or shell invocation with typed APIs and constrained inputs.", {"call": name, "skipped_function": True}))
+
     def _analyze_class(self, node: ast.ClassDef, info: ClassDiagnostic) -> None:
         """Emit class diagnostics."""
         if node.name in self.config.ignore_classes:
@@ -1252,7 +1603,7 @@ class CodeQualityVisitor(ast.NodeVisitor):
             self.issues.append(self.issue_factory.create("missing_docstrings", node.lineno, node.col_offset, info.qualname, f"Function {info.qualname} is missing a meaningful docstring.", "Add Args and Returns blocks for non-trivial signatures and state side effects for private methods.", {"entity_type": "function"}))
         if info.missing_type_hints:
             self.issues.append(self.issue_factory.create("type_hint_gaps", node.lineno, node.col_offset, info.qualname, f"Function {info.qualname} has incomplete type hints.", "Add explicit parameter and return type hints.", {"missing_hints": list(info.missing_type_hints)}))
-        if body_is_stub(body):
+        if body_is_stub(body) and not self._is_declared_interface(node, info):
             self.issues.append(self.issue_factory.create("stubs", node.lineno, node.col_offset, info.qualname, f"Function {info.qualname} has a stub implementation.", "Replace pass, ellipsis, or NotImplementedError with a real diagnostic path or domain exception.", {"entity_type": "function"}))
         placeholder = placeholder_return_kind(body)
         if placeholder:
@@ -1261,6 +1612,16 @@ class CodeQualityVisitor(ast.NodeVisitor):
             self.issues.append(self.issue_factory.create("suspicious_short_functions", node.lineno, node.col_offset, info.qualname, f"Function {info.qualname} is suspiciously short.", "Confirm this is a real adapter or expand it until the control path is auditable.", {"line_count": info.executable_line_count, "minimum": self.config.min_function_lines}))
         if info.cyclomatic_complexity > self.config.max_cyclomatic_complexity:
             self.issues.append(self.issue_factory.create("complexity", node.lineno, node.col_offset, info.qualname, f"Function {info.qualname} has high cyclomatic complexity.", "Split validation, collection, and rendering paths into named units with typed result objects.", {"complexity": info.cyclomatic_complexity, "maximum": self.config.max_cyclomatic_complexity}))
+
+    def _is_declared_interface(self, node: ast.FunctionDef | ast.AsyncFunctionDef, info: FunctionDiagnostic) -> bool:
+        """Return true for bodies that are interface declarations, not stubs.
+
+        Covers @abstractmethod / @overload functions and methods of Protocol classes.
+        """
+        if decorator_names(node) & (ABSTRACT_DECORATORS | OVERLOAD_DECORATORS):
+            return True
+        owner = info.qualname.rpartition(".")[0]
+        return bool(owner) and owner in self.protocol_classes
 
     def _short_class(self, info: ClassDiagnostic, body: Sequence[ast.stmt]) -> bool:
         """Return true when a class deserves suspicious-short review."""
@@ -1284,7 +1645,7 @@ class CodeQualityVisitor(ast.NodeVisitor):
         """Emit duplicate definition issues for current scope."""
         scope = self.definition_stack[-1]
         for name, nodes in scope.items():
-            lines = sorted({getattr(node, "lineno", 0) for node in nodes})
+            lines = sorted({getattr(node, "lineno", 0) for node in nodes if not (is_property_accessor(node) or is_overload(node))})
             if len(lines) > 1:
                 self.issues.append(self.issue_factory.create("duplicate_definitions", lines[1], 0, self._qualname(name), f"Name {name} is defined multiple times in the same scope.", "Rename or remove duplicate definitions so runtime binding is unambiguous.", {"definition_lines": lines}))
         scope.clear()
@@ -1308,8 +1669,7 @@ class CodeQualityVisitor(ast.NodeVisitor):
         methods: set[str] = set()
         for item in node.body:
             if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                decorators = {dotted_name(decorator) for decorator in item.decorator_list}
-                if decorators & {"abstractmethod", "abc.abstractmethod", "abstractproperty", "abc.abstractproperty"}:
+                if decorator_names(item) & ABSTRACT_DECORATORS:
                     methods.add(item.name)
         return methods
 
@@ -1423,7 +1783,7 @@ def placeholder_return_kind(body: Sequence[ast.stmt]) -> str:
     value = body[0].value
     if value is None:
         return "implicit None"
-    if isinstance(value, ast.Constant) and value.value in PLACEHOLDER_CONSTANTS:
+    if isinstance(value, ast.Constant) and any(type(value.value) is type(constant) and value.value == constant for constant in PLACEHOLDER_CONSTANTS):
         return repr(value.value)
     if isinstance(value, ast.List) and not value.elts:
         return "empty list"
@@ -1451,8 +1811,36 @@ def handler_is_silent(node: ast.ExceptHandler) -> bool:
             return True
     module = ast.Module(body=list(body), type_ignores=[])
     has_raise = any(isinstance(statement, ast.Raise) for statement in ast.walk(module))
-    has_log = any(isinstance(statement, ast.Call) and dotted_name(statement.func) in {"logging.error", "logging.exception", "logger.error", "logger.exception"} for statement in ast.walk(module))
+    has_log = any(isinstance(statement, ast.Call) and is_log_call(statement) for statement in ast.walk(module))
     return not (has_raise or has_log)
+
+
+def is_log_call(node: ast.Call) -> bool:
+    """Return true for ``<receiver>.<error|exception|critical|warning|warn|log>(...)``.
+
+    The receiver's final name segment must contain "log" (logging, logger, log,
+    self.logger, self.log, LOGGER, audit_log); the check is purely AST-name based.
+    """
+    func = node.func
+    if not isinstance(func, ast.Attribute) or func.attr not in LOG_METHODS:
+        return False
+    receiver = dotted_name(func.value).split(".")[-1]
+    return "log" in receiver.lower()
+
+
+def decorator_names(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> set[str]:
+    """Return dotted names of a definition's decorators (call-form decorators by callee)."""
+    return {dotted_name(decorator) for decorator in node.decorator_list}
+
+
+def is_overload(node: ast.AST) -> bool:
+    """Return true for a function decorated with typing.overload."""
+    return isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and bool(decorator_names(node) & OVERLOAD_DECORATORS)
+
+
+def is_property_accessor(node: ast.AST) -> bool:
+    """Return true for a ``@<name>.setter`` or ``@<name>.deleter`` property accessor."""
+    return isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and any(name.endswith((".setter", ".deleter")) for name in decorator_names(node))
 
 
 def dotted_name(node: ast.AST | None) -> str:
@@ -1505,7 +1893,7 @@ class FileAnalyzer:
         collector = ImportCollector()
         collector.visit(tree)
         imports = tuple(collector.records)
-        edges = tuple(self.resolver.resolve(self.path, record) for record in imports)
+        edges = tuple(edge for record in imports for edge in self.resolver.resolve_all(self.path, record))
         issues.extend(self._import_diagnostics(edges, tree, imports, factory))
         visitor = CodeQualityVisitor(self.config_manager, factory)
         ast_issues, functions, classes = visitor.analyze(tree)
@@ -1540,11 +1928,12 @@ class FileAnalyzer:
         if self.config.detect_unused_imports:
             loaded = LoadedNameCollector()
             loaded.visit(tree)
+            exported = dunder_all_names(tree)
             for record in imports:
-                if record.kind == "dynamic_import":
+                if record.kind == "dynamic_import" or (record.kind == "from_import" and record.level == 0 and record.module == "__future__"):
                     continue
                 for bound in record.bound_names:
-                    if bound != "*" and not bound.startswith("_") and bound not in loaded.loaded:
+                    if bound != "*" and not bound.startswith("_") and bound not in loaded.loaded and bound not in exported:
                         issues.append(factory.create("unused_imports", record.line_number, record.column_offset, bound, f"Imported name appears unused: {bound}.", "Remove the import or use it in a visible code path.", {"raw": record.raw, "module": record.module}))
         return issues
 
@@ -1687,17 +2076,24 @@ class ProjectScanner:
             return ()
         max_workers = min(self.config.max_workers, max(1, len(self.index.python_files)))
         if max_workers == 1:
-            return tuple(FileAnalyzer(path, self.index, self.config_manager).analyze() for path in self.index.python_files)
+            return tuple(self._analyze_one(path) for path in self.index.python_files)
         results: list[FileAnalysisResult] = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_path = {executor.submit(FileAnalyzer(path, self.index, self.config_manager).analyze): path for path in self.index.python_files}
+            future_to_path = {executor.submit(self._analyze_one, path): path for path in self.index.python_files}
             for future in concurrent.futures.as_completed(future_to_path):
-                path = future_to_path[future]
-                try:
-                    results.append(future.result())
-                except (DoctorError, OSError, RuntimeError, TypeError, ValueError, LookupError) as error:
-                    results.append(self._execution_error(path, error))
+                results.append(future.result())
         return tuple(sorted(results, key=lambda item: item.relative_path))
+
+    def _analyze_one(self, path: Path) -> FileAnalysisResult:
+        """Analyze one file; analyzer failures become an analysis_read_errors finding.
+
+        Shared by the serial and thread-pool paths so both treat failures identically.
+        """
+        try:
+            return FileAnalyzer(path, self.index, self.config_manager).analyze()
+        except (DoctorError, OSError, RuntimeError, TypeError, ValueError, LookupError) as error:
+            logging.getLogger(LOGGER_NAME).error("Analyzer execution failed for %s", path, exc_info=True)
+            return self._execution_error(path, error)
 
     def _execution_error(self, path: Path, error: BaseException) -> FileAnalysisResult:
         """Build explicit result for worker failure."""
@@ -1881,6 +2277,24 @@ class MarkdownReportWriter:
         return lines
 
 
+def output_report_paths(project_root: Path, report_basename: str, output: Path | None, json_output: Path | None) -> tuple[Path, Path]:
+    """Return (markdown, JSON) report paths; the two never point at the same file (D-25).
+
+    ``-o report.json`` without ``--json-output`` writes JSON to report.json and markdown
+    to report.md. Explicitly identical paths are a configuration error.
+    """
+    md = output.resolve() if output else project_root / f"{report_basename}.md"
+    if json_output:
+        js = json_output.resolve()
+    elif md.suffix.lower() == ".json":
+        js, md = md, md.with_suffix(".md")
+    else:
+        js = md.with_suffix(".json")
+    if md == js:
+        raise ConfigurationError("Markdown and JSON report paths must differ.", {"markdown": str(md), "json": str(js)})
+    return md, js
+
+
 class StateStore:
     """Persists scan history, report aliases, and file hashes for report rollback."""
 
@@ -1920,13 +2334,38 @@ class StateStore:
             raise StateStoreError("Unable to load previous state index.", {"path": str(self.db), "error": str(error)}) from error
         return {str(path): str(file_hash) for path, file_hash in rows}
 
+    def reserve_run_id(self, base_run_id: str) -> str:
+        """Return a run id unique in this state DB, suffixing -1, -2, ... on collision.
+
+        The run's report directory is created with exist_ok=False as the reservation, so
+        concurrent scans sharing one state directory cannot claim the same id (D-08, D-32).
+        """
+        self.initialize()
+        try:
+            with sqlite3.connect(self.db) as conn:
+                taken = {str(row[0]) for row in conn.execute("SELECT run_id FROM runs WHERE run_id = ? OR run_id LIKE ?", (base_run_id, f"{base_run_id}-%"))}
+        except sqlite3.Error as error:
+            raise StateStoreError("Unable to read run ids from state database.", {"path": str(self.db), "error": str(error)}) from error
+        suffix = 0
+        while True:
+            candidate = base_run_id if suffix == 0 else f"{base_run_id}-{suffix}"
+            suffix += 1
+            if candidate in taken:
+                continue
+            try:
+                (self.reports_root / candidate).mkdir(exist_ok=False)
+            except FileExistsError:
+                continue
+            except OSError as error:
+                raise StateStoreError("Unable to reserve run report directory.", {"path": str(self.reports_root / candidate), "error": str(error)}) from error
+            return candidate
+
     def report_paths(self, run_id: str, output: Path | None, json_output: Path | None) -> ReportPaths:
         """Resolve all report paths for a run."""
         run_dir = self.reports_root / run_id
         state_md = run_dir / f"{self.config.report_basename}.md"
         state_json = run_dir / f"{self.config.report_basename}.json"
-        md = output.resolve() if output else self.project_root / f"{self.config.report_basename}.md"
-        js = json_output.resolve() if json_output else md.with_suffix(".json")
+        md, js = output_report_paths(self.project_root, self.config.report_basename, output, json_output)
         return ReportPaths(md, js, state_md, state_json, self.reports_root / "latest.md", self.reports_root / "latest.json")
 
     def persist(self, result: ProjectAnalysisResult, markdown: str, json_text: str, paths: ReportPaths) -> None:
@@ -1940,14 +2379,16 @@ class StateStore:
         write_text_atomic(paths.latest_json_path, json_text)
         try:
             with sqlite3.connect(self.db) as conn:
-                conn.execute("INSERT OR REPLACE INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (result.run_id, result.project_root, result.config_hash, result.started_at, result.finished_at, "complete", result.summary.files_scanned, result.summary.total_issues, result.summary.critical_issues, result.summary.serious_issues, result.summary.minor_issues, result.summary.info_issues, str(paths.state_markdown_path), str(paths.state_json_path), stable_hash_text(markdown + json_text)))
-                conn.executemany("INSERT OR REPLACE INTO file_snapshots VALUES (?, ?, ?, ?, ?)", [(result.run_id, file.relative_path, file.file_hash, file.size_bytes, file.modified_time) for file in result.files])
+                conn.execute("INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (result.run_id, result.project_root, result.config_hash, result.started_at, result.finished_at, "complete", result.summary.files_scanned, result.summary.total_issues, result.summary.critical_issues, result.summary.serious_issues, result.summary.minor_issues, result.summary.info_issues, str(paths.state_markdown_path), str(paths.state_json_path), stable_hash_text(markdown + json_text)))
+                conn.executemany("INSERT INTO file_snapshots VALUES (?, ?, ?, ?, ?)", [(result.run_id, file.relative_path, file.file_hash, file.size_bytes, file.modified_time) for file in result.files])
                 conn.execute("INSERT OR REPLACE INTO report_aliases VALUES ('latest', ?, ?, ?, ?)", (result.run_id, str(paths.state_markdown_path), str(paths.state_json_path), isoformat_utc(utc_now())))
         except sqlite3.Error as error:
             raise StateStoreError("Unable to persist run state.", {"run_id": result.run_id, "error": str(error)}) from error
 
     def history(self, limit: int) -> tuple[RunRecord, ...]:
-        """Return recent run records."""
+        """Return recent run records; a project with no state database has none."""
+        if not self.db.exists():
+            return ()
         self.initialize()
         try:
             with sqlite3.connect(self.db) as conn:
@@ -1958,6 +2399,8 @@ class StateStore:
 
     def rollback(self, run_id: str) -> RunRecord:
         """Make a previous run the latest report alias."""
+        if not self.db.exists():
+            raise StateStoreError("Run ID does not exist in state history.", {"run_id": run_id, "state_db": str(self.db), "reason": "no state database"})
         self.initialize()
         try:
             with sqlite3.connect(self.db) as conn:
@@ -2012,25 +2455,45 @@ def render_history(records: Sequence[RunRecord]) -> str:
 
 
 def exit_code_for_summary(summary: SummaryCounts, gate: str) -> int:
-    """Calculate process exit code from severity gate."""
+    """Calculate process exit code from severity gate.
+
+    Returns the most severe tripped code: 2 when critical findings exist under any gate
+    other than "none", 1 when non-critical findings at or above the gate exist, else 0.
+    """
     if gate == "none":
         return 0
-    if gate == "critical":
-        return 2 if summary.critical_issues else 0
-    if gate == "serious":
-        return 2 if summary.critical_issues else (1 if summary.serious_issues else 0)
-    if gate == "minor":
-        return 1 if summary.critical_issues or summary.serious_issues or summary.minor_issues else 0
-    if gate == "info":
-        return 1 if summary.total_issues else 0
-    return 1
+    if summary.critical_issues:
+        return 2
+    tripped = {
+        "critical": 0,
+        "serious": summary.serious_issues,
+        "minor": summary.serious_issues + summary.minor_issues,
+        "info": summary.serious_issues + summary.minor_issues + summary.info_issues,
+    }
+    if gate not in tripped:
+        return 1
+    return 1 if tripped[gate] else 0
+
+
+def require_project_root(raw_root: str) -> Path:
+    """Resolve a CLI project root that must already exist as a directory.
+
+    Checked before any StateStore call so a mistyped root is never created on disk.
+    """
+    project_root = Path(raw_root).resolve()
+    if not project_root.exists():
+        raise AnalysisExecutionError("Project root does not exist.", {"project_root": str(project_root)})
+    if not project_root.is_dir():
+        raise AnalysisExecutionError("Project root must be a directory.", {"project_root": str(project_root)})
+    return project_root
 
 
 def run_scan(args: argparse.Namespace) -> int:
     """Execute scan command and write reports."""
     config_manager = ConfigManager(Path(args.config).resolve() if args.config else None)
-    project_root = Path(args.project_root).resolve()
+    project_root = require_project_root(args.project_root)
     store = StateStore(project_root, config_manager.config)
+    output_report_paths(project_root, config_manager.config.report_basename, Path(args.output) if args.output else None, Path(args.json_output) if args.json_output else None)
     state_enabled = not args.no_state
     previous: Mapping[str, str] = {}
     if state_enabled:
@@ -2044,6 +2507,8 @@ def run_scan(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
     result = ProjectScanner(project_root, config_manager).scan(previous)
+    if state_enabled:
+        result = replace(result, run_id=store.reserve_run_id(result.run_id))
     markdown = MarkdownReportWriter(config_manager.config).render(result)
     json_text = dumps_json(result)
     paths = store.report_paths(result.run_id, Path(args.output).resolve() if args.output else None, Path(args.json_output).resolve() if args.json_output else None)
@@ -2074,14 +2539,14 @@ def run_init_config(args: argparse.Namespace) -> int:
 def run_history(args: argparse.Namespace) -> int:
     """Print local scan history."""
     config_manager = ConfigManager(Path(args.config).resolve() if args.config else None)
-    print(render_history(StateStore(Path(args.project_root).resolve(), config_manager.config).history(args.limit)))
+    print(render_history(StateStore(require_project_root(args.project_root), config_manager.config).history(args.limit)))
     return 0
 
 
 def run_rollback(args: argparse.Namespace) -> int:
     """Roll latest report alias back to a previous run."""
     config_manager = ConfigManager(Path(args.config).resolve() if args.config else None)
-    record = StateStore(Path(args.project_root).resolve(), config_manager.config).rollback(args.run_id)
+    record = StateStore(require_project_root(args.project_root), config_manager.config).rollback(args.run_id)
     print(f"Rolled latest report state back to run {record.run_id}.")
     print(f"Markdown report: {record.report_md}")
     print(f"JSON report: {record.report_json}")
@@ -2160,7 +2625,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         logging.getLogger(LOGGER_NAME).error(error.render())
         print(error.render(), file=sys.stderr)
         return 4
-    except (OSError, RuntimeError, TypeError, ValueError, sqlite3.Error) as error:
+    except Exception as error:  # every unclassified failure maps to exit 5; the traceback goes to the log
         logging.getLogger(LOGGER_NAME).critical("Unclassified doctor runtime failure", exc_info=True)
         diagnostic = DoctorError(f"Unclassified runtime failure: {type(error).__name__}: {error}", "Inspect production_doctor.log for the stack trace, then correct the failing path or report the analyzer defect.", {"error_type": type(error).__name__})
         print(diagnostic.render(), file=sys.stderr)

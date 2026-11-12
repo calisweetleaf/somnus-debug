@@ -1,0 +1,24 @@
+"""Run doctor's analysis programmatically, no CLI, no state, no files written."""
+import os, logging
+from pathlib import Path
+from somnus_debug.doctor.core import (ConfigManager, ProjectScanner, MarkdownReportWriter,
+    dumps_json, exit_code_for_summary, FileAnalyzer, ProjectFileIndex)
+root = Path("ex2/proj")
+before = sorted(str(p) for p in Path("ex2").rglob("*"))
+cm = ConfigManager(None)                      # defaults (no python_doctor.yaml auto-discovery)
+print("config_hash", cm.config_hash[:16], "gate", cm.config.severity_exit_level, "workers", cm.config.max_workers)
+res = ProjectScanner(root, cm).scan({})       # previous_index={} -> all files 'new'
+s = res.summary
+print(type(res).__name__, "run_id", res.run_id, "files", s.files_scanned, "issues", s.total_issues, "crit", s.critical_issues, "serious", s.serious_issues, "score", s.production_score)
+print("first issue:", res.issues[0].category, res.issues[0].file_path, res.issues[0].line_number, res.issues[0].severity)
+print("exit code (gate=serious):", exit_code_for_summary(s, "serious"), "(gate=critical):", exit_code_for_summary(s, "critical"))
+md = MarkdownReportWriter(cm.config).render(res); js = dumps_json(res)
+print("md chars", len(md), "json chars", len(js), "md starts with <style>:", md.startswith("<style>"))
+idx = ProjectFileIndex(root.resolve(), cm.config)
+print("index modules:", sorted(idx.module_to_file))
+fa = FileAnalyzer(root / "pkg" / "a.py", idx, cm).analyze()
+print("single-file:", fa.relative_path, "syntax_valid", fa.syntax_valid, "issues", [i.category for i in fa.issues])
+print("edges:", [(e.imported_module, e.classification, e.target_file) for e in fa.import_edges])
+after = sorted(str(p) for p in Path("ex2").rglob("*"))
+print("files written under ex2:", sorted(set(after) - set(before)))
+print("cwd log exists:", os.path.exists("production_doctor.log"), "root handlers:", logging.getLogger().handlers)

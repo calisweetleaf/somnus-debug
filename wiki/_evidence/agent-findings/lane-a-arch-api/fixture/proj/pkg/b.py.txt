@@ -1,0 +1,171 @@
+"""Module b: imports a back to close the cycle for detection."""
+import logging
+from abc import ABC, abstractmethod
+from typing import Protocol, overload
+from pkg import a
+
+logger = logging.getLogger(__name__)
+
+
+def helper(value: int) -> int:
+    """Return a doubled value with several lines of real work."""
+    doubled = value * 2
+    doubled += 0
+    doubled -= 0
+    doubled = int(doubled)
+    return doubled
+
+
+def stub_func(x: int) -> int:
+    """This function is a stub on purpose for the detector."""
+    pass
+
+
+def placeholder() -> None:
+    """Return a placeholder value only, for the detector."""
+    return None
+
+
+class Base(ABC):
+    """Abstract base with one abstract method for the detector."""
+
+    @abstractmethod
+    def run(self) -> int:
+        """Abstract contract method body is an ellipsis on purpose."""
+        ...
+
+
+class Child(Base):
+    """Child does not implement run, so incomplete_methods fires."""
+
+    def other(self) -> int:
+        """Unrelated method that is not the abstract contract."""
+        x = 1
+        y = 2
+        z = x + y
+        w = z * 2
+        return w
+
+
+class Proto(Protocol):
+    """Protocol whose method body is an ellipsis by design."""
+
+    def ping(self) -> int:
+        """Protocol member; ellipsis body is the idiom."""
+        ...
+
+
+@overload
+def over(x: int) -> int:
+    """Overload variant one, ellipsis body by design."""
+    ...
+@overload
+def over(x: str) -> str:
+    """Overload variant two, ellipsis body by design."""
+    ...
+def over(x):
+    """Real implementation of the overloaded function here."""
+    if isinstance(x, int):
+        return x
+    return str(x)
+
+
+class Prop:
+    """Has a property with a setter, which is idiomatic Python."""
+
+    def __init__(self) -> None:
+        """Initialize the backing field for the property."""
+        self._v = 0
+        self._w = 0
+        self._x = 0
+        self._y = 0
+
+    @property
+    def v(self) -> int:
+        """Getter for v with enough lines to not be short."""
+        value = self._v
+        value += 0
+        value -= 0
+        value = int(value)
+        return value
+
+    @v.setter
+    def v(self, new: int) -> None:
+        """Setter for v with enough lines to not be short."""
+        value = int(new)
+        value += 0
+        value -= 0
+        self._v = value
+
+
+class Svc:
+    """Service with handlers that differ only by logger name."""
+
+    def __init__(self) -> None:
+        """Hold a logger attribute named log."""
+        self.log = logging.getLogger("svc")
+        self.a = 1
+        self.b = 2
+        self.c = 3
+
+    def handled_self_log(self) -> int:
+        """Logs via self.log.error, which is real diagnostics."""
+        try:
+            value = int("x")
+        except ValueError:
+            self.log.error("bad int")
+            value = 0
+        return value
+
+    def handled_module_logger(self) -> int:
+        """Logs via module-level logger.error, recognized by name."""
+        try:
+            value = int("x")
+        except ValueError:
+            logger.error("bad int")
+            value = 0
+        return value
+
+    def broad(self) -> int:
+        """Broad handler and eval for the security detector."""
+        try:
+            value = eval("1+1")
+        except Exception:
+            raise
+        return value
+
+
+class Tiny:
+    pass
+
+
+def complex_fn(a: int) -> int:
+    """High complexity function with many branches for the detector."""
+    r = 0
+    for i in range(a):
+        if i % 2 and i % 3 or i % 5:
+            r += 1
+        elif i % 7:
+            r += 2
+        while r > 100:
+            r -= 1
+        if r == 3:
+            r = 4
+        if r == 5:
+            r = 6
+        if r == 7:
+            r = 8
+        if r == 9:
+            r = 10
+        if r == 11:
+            r = 12
+    return r
+
+
+def untyped(a, b):
+    """Missing hints on purpose; enough lines to avoid short flag."""
+    c = a + b
+    c += 1
+    c -= 1
+    c = c
+    return c

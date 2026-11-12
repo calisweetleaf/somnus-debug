@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-7897-7158-b353-3dc7af71d00e"
+#   revision: 1
+#   title: "pycachecleaner.py"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-7897-7158-b353-3dc7af71d00e"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "pycachecleaner-py"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-7897-7158-b353-3dc7af71d00e"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """
 pycache_cleaner.py
 ===================
@@ -6,8 +38,8 @@ pycache_cleaner.py
 This script provides a configurable, production‑grade tool for finding and
 removing Python bytecode caches (``__pycache__`` directories and ``*.pyc``/``*.pyo``
 files) across one or more directory trees.  It was designed with
-large, nested development folders in mind and supports Windows‑specific
-considerations such as long paths and multiple drive letters.
+large, nested development folders in mind, including roots on multiple
+Windows drive letters.
 
 Features
 --------
@@ -29,8 +61,6 @@ Features
   relative to each root.
 * **Symlink control:** Choose whether or not to follow symbolic links when
   traversing the file system.
-* **Windows long path support:** Paths are normalized to the ``\\?\``
-  namespace on Windows to allow removal of very deep folder structures.
 
 Usage
 -----
@@ -45,7 +75,10 @@ settings from the configuration on the command line.  For example::
     python pycache_cleaner.py --config C:\\path\\to\\config.yaml --verbose
 
 The script returns a summary at the end with the number of items deleted
-and the total size of data removed.  Use the ``--dry-run`` flag to
+and the total size of data removed (in dry-run mode: the items that would
+be deleted and the space that would be freed).  It exits 1 if a configured
+root does not exist or is not a directory (the other roots are still
+processed), and 1 on a configuration error.  Use the ``--dry-run`` flag to
 ensure the configuration behaves as expected before performing a live
 cleanup.
 
@@ -85,8 +118,11 @@ Fields
   At least one root must be provided.  Environment variables and ``~``
   are expanded automatically.
 * ``exclude`` (list of strings): Directory names or glob patterns to
-  exclude from traversal.  Entire directories matching any of these
-  patterns will be skipped.
+  exclude from traversal.  Each pattern is matched (``fnmatch``,
+  case-sensitive) against the directory's name and against its path
+  relative to the root, using ``/`` separators, so ``node_modules``,
+  ``node_modules/*`` and ``vendor/keep`` all work.  Entire directories
+  matching any of these patterns will be skipped.
 * ``targets`` (list of strings): Names or glob patterns of directories or
   files to remove.  Items without a wildcard (``*`` or ``?``) are
   treated as directory names to delete wholesale.  Items containing
@@ -118,8 +154,19 @@ from typing import Iterable, List, Optional, Tuple
 try:
     import yaml  # type: ignore
 except ImportError as e:
-    print("PyYAML is required. Install it via `pip install pyyaml`.", file=sys.stderr)
-    raise
+    # Raised (not printed) so the somnus-debug dispatcher reports it once,
+    # cleanly; direct script use shows this message as the final error line.
+    raise ImportError(
+        "pycache-clean requires PyYAML. Install it via `pip install pyyaml`.", name="yaml"
+    ) from e
+
+
+class ConfigError(ValueError):
+    """Raised when a cleaner configuration value has the wrong type or range."""
+
+
+def _is_str_list(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
 @dataclass
@@ -135,29 +182,86 @@ class CleanerConfig:
     log_file: Optional[str] = None
 
     @staticmethod
-    def from_yaml(path: Path) -> "CleanerConfig":
-        """Load configuration from a YAML file."""
+    def load(path: Path) -> Tuple["CleanerConfig", List[str]]:
+        """Load and validate a YAML configuration without logging anything.
+
+        Returns the validated config and a list of warning messages (unknown
+        keys) for the caller to emit once logging is configured; emitting
+        them here would implicitly configure the root logger at WARNING and
+        silence the cleaner's own INFO output and log file.  Raises
+        ConfigError for values of the wrong type or range.
+        """
         with path.open("r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
+            data = yaml.safe_load(f)
+        if data is None:
+            data = {}
+        if not isinstance(data, dict):
+            raise ConfigError(
+                f"configuration must be a mapping of keys to values, got {type(data).__name__}"
+            )
         cfg = CleanerConfig()
+        warnings: List[str] = []
         for key, value in data.items():
-            if hasattr(cfg, key):
+            if isinstance(key, str) and key in CleanerConfig.__dataclass_fields__:
                 setattr(cfg, key, value)
             else:
-                logging.warning("Ignoring unknown config key '%s'", key)
+                warnings.append(f"Ignoring unknown config key '{key}'")
+        cfg.validate()
+        return cfg, warnings
+
+    @staticmethod
+    def from_yaml(path: Path) -> "CleanerConfig":
+        """Load configuration from a YAML file (warnings go to ``logging``)."""
+        cfg, warnings = CleanerConfig.load(path)
+        for message in warnings:
+            logging.warning("%s", message)
         return cfg
 
+    def validate(self) -> None:
+        """Reject values whose type or range would change what gets deleted.
+
+        A scalar ``roots: /path`` would otherwise be iterated per character
+        (yielding ``/``), and a string ``dry_run: "false"`` is truthy, so
+        these are hard errors rather than coercions.
+        """
+        errors: List[str] = []
+        if not _is_str_list(self.roots):
+            errors.append(f"'roots' must be a list of path strings, got {self.roots!r}")
+        for key in ("exclude", "targets"):
+            value = getattr(self, key)
+            if not _is_str_list(value):
+                errors.append(f"'{key}' must be a list of strings, got {value!r}")
+        for key in ("dry_run", "verbose", "follow_symlinks"):
+            value = getattr(self, key)
+            if not isinstance(value, bool):
+                errors.append(f"'{key}' must be true or false, got {value!r}")
+        depth = self.max_depth
+        if depth is not None and (isinstance(depth, bool) or not isinstance(depth, int) or depth < 0):
+            errors.append(f"'max_depth' must be an integer >= 0 or null, got {depth!r}")
+        if self.log_file is not None and not isinstance(self.log_file, str):
+            errors.append(f"'log_file' must be a path string or null, got {self.log_file!r}")
+        if errors:
+            raise ConfigError("invalid configuration: " + "; ".join(errors))
+
     def normalize(self) -> None:
-        """Normalize and expand paths in the configuration."""
-        self.roots = [str(Path(p).expanduser().resolve()) for p in self.roots]
+        """Normalize and expand paths in the configuration.
+
+        ``$VARS``/``${VARS}`` and ``~`` are expanded.  Relative roots resolve
+        against the current working directory (not the config file's
+        directory), as they always have.
+        """
+        self.roots = [
+            str(Path(os.path.expandvars(p)).expanduser().resolve()) for p in self.roots
+        ]
         if self.log_file:
-            self.log_file = str(Path(self.log_file).expanduser().resolve())
+            self.log_file = str(Path(os.path.expandvars(self.log_file)).expanduser().resolve())
 
 
 class PycacheCleaner:
     """Implements the logic for finding and deleting Python cache artefacts."""
 
     def __init__(self, config: CleanerConfig) -> None:
+        config.validate()
         config.normalize()
         if not config.roots:
             raise ValueError("No roots specified in configuration.")
@@ -165,12 +269,14 @@ class PycacheCleaner:
         # Separate targets into directory names and file patterns
         self.target_dirs = [t for t in config.targets if not any(c in t for c in "*?")]
         self.file_patterns = [t for t in config.targets if any(c in t for c in "*?")]
-        # Compile exclude patterns for efficiency
-        self.exclude_patterns = config.exclude
+        # Exclude patterns are matched with "/" separators on every platform.
+        self.exclude_patterns = [pat.replace("\\", "/") for pat in config.exclude]
         # Statistics
         self.deleted_dirs: int = 0
         self.deleted_files: int = 0
         self.deleted_bytes: int = 0
+        # Roots that could not be scanned (missing or not a directory).
+        self.failed_roots: List[str] = []
 
     def run(self) -> None:
         """Run the cleaner across all configured root directories."""
@@ -178,12 +284,17 @@ class PycacheCleaner:
             path = Path(root)
             if not path.exists() or not path.is_dir():
                 logging.error("Root path does not exist or is not a directory: %s", root)
+                self.failed_roots.append(root)
                 continue
             logging.info("Scanning root: %s", root)
             self._scan_root(path)
         # Summary
-        logging.info("Summary: deleted %d directories, %d files; freed %.2f MiB", self.deleted_dirs,
-                     self.deleted_files, self.deleted_bytes / (1024 * 1024))
+        if self.cfg.dry_run:
+            logging.info("Summary: would delete %d directories, %d files; would free %.2f MiB",
+                         self.deleted_dirs, self.deleted_files, self.deleted_bytes / (1024 * 1024))
+        else:
+            logging.info("Summary: deleted %d directories, %d files; freed %.2f MiB", self.deleted_dirs,
+                         self.deleted_files, self.deleted_bytes / (1024 * 1024))
 
     def _scan_root(self, root: Path) -> None:
         """Recursively scan a root directory and delete matching targets."""
@@ -204,7 +315,7 @@ class PycacheCleaner:
             for entry in entries:
                 if entry.is_dir(follow_symlinks=self.cfg.follow_symlinks):
                     # Determine whether to delete this directory
-                    if self._is_excluded(entry.name):
+                    if self._is_excluded(entry.name, self._relative(root, entry.path)):
                         logging.debug("Skipping excluded directory: %s", entry.path)
                         continue
                     if entry.name in self.target_dirs:
@@ -214,7 +325,10 @@ class PycacheCleaner:
             for entry in entries:
                 try:
                     if entry.is_dir(follow_symlinks=self.cfg.follow_symlinks):
-                        if self._is_excluded(entry.name) or entry.name in self.target_dirs:
+                        if (
+                            self._is_excluded(entry.name, self._relative(root, entry.path))
+                            or entry.name in self.target_dirs
+                        ):
                             # Already handled or excluded; skip
                             continue
                         stack.append((Path(entry.path), depth + 1))
@@ -225,10 +339,24 @@ class PycacheCleaner:
                     # Some entries may disappear between scandir and stat
                     logging.debug("Ignoring disappearing entry: %s", entry.path)
 
-    def _is_excluded(self, name: str) -> bool:
-        """Check whether a directory name matches any exclude pattern."""
+    @staticmethod
+    def _relative(root: Path, path: str) -> str:
+        """Return ``path`` relative to ``root`` with "/" separators."""
+        return Path(os.path.relpath(path, root)).as_posix()
+
+    def _is_excluded(self, name: str, rel_path: Optional[str] = None) -> bool:
+        """Check whether a directory matches any exclude pattern.
+
+        A pattern matches the directory's bare name (``node_modules``), its
+        path relative to the scanned root (``vendor/keep``), or that path
+        with a trailing slash, so ``node_modules/*`` -- "everything inside
+        node_modules" -- excludes the directory itself.
+        """
+        candidates = [name]
+        if rel_path is not None:
+            candidates += [rel_path, rel_path + "/"]
         for pat in self.exclude_patterns:
-            if fnmatch.fnmatchcase(name, pat):
+            if any(fnmatch.fnmatchcase(candidate, pat) for candidate in candidates):
                 return True
         return False
 
@@ -245,7 +373,8 @@ class PycacheCleaner:
             size = self._get_dir_size(path)
         except Exception:
             size = 0
-        logging.debug("Deleting directory: %s (%.2f MiB)", path, size / (1024 * 1024))
+        logging.debug("%s directory: %s (%.2f MiB)", "Would delete" if self.cfg.dry_run else "Deleting",
+                      path, size / (1024 * 1024))
         if not self.cfg.dry_run:
             try:
                 shutil.rmtree(path)
@@ -255,7 +384,7 @@ class PycacheCleaner:
         self.deleted_dirs += 1
         self.deleted_bytes += size
         if self.cfg.verbose:
-            logging.info("Removed directory %s", path)
+            logging.info("%s directory %s", "Would remove" if self.cfg.dry_run else "Removed", path)
 
     def _delete_file(self, path: Path) -> None:
         """Delete a single file and update statistics."""
@@ -263,7 +392,8 @@ class PycacheCleaner:
             size = path.stat().st_size
         except Exception:
             size = 0
-        logging.debug("Deleting file: %s (%.2f KiB)", path, size / 1024)
+        logging.debug("%s file: %s (%.2f KiB)", "Would delete" if self.cfg.dry_run else "Deleting",
+                      path, size / 1024)
         if not self.cfg.dry_run:
             try:
                 path.unlink()
@@ -273,7 +403,7 @@ class PycacheCleaner:
         self.deleted_files += 1
         self.deleted_bytes += size
         if self.cfg.verbose:
-            logging.info("Removed file %s", path)
+            logging.info("%s file %s", "Would remove" if self.cfg.dry_run else "Removed", path)
 
     @staticmethod
     def _get_dir_size(path: Path) -> int:
@@ -302,25 +432,39 @@ def setup_logging(cfg: CleanerConfig) -> None:
     logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s", handlers=handlers)
 
 
-def parse_args() -> argparse.Namespace:
+def _non_negative_int(text: str) -> int:
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid int value: {text!r}") from None
+    if value < 0:
+        raise argparse.ArgumentTypeError(f"must be >= 0, got {value}")
+    return value
+
+
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command‑line arguments."""
     parser = argparse.ArgumentParser(description="Remove Python bytecode caches across directory trees.")
     parser.add_argument("--config", type=str, default="config.yaml",
                         help="Path to YAML configuration file (default: config.yaml)")
     parser.add_argument("--dry-run", action="store_true", help="Perform a dry run without deleting anything")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging output")
-    parser.add_argument("--max-depth", type=int, default=None, help="Maximum recursion depth (overrides config)")
+    parser.add_argument("--max-depth", type=_non_negative_int, default=None, help="Maximum recursion depth (overrides config)")
     parser.add_argument("--follow-symlinks", action="store_true", help="Follow symbolic links during traversal")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: Optional[List[str]] = None) -> int:
+    args = parse_args(argv)
     config_path = Path(args.config).expanduser().resolve()
     if not config_path.exists():
         print(f"Configuration file not found: {config_path}", file=sys.stderr)
-        sys.exit(1)
-    cfg = CleanerConfig.from_yaml(config_path)
+        return 1
+    try:
+        cfg, config_warnings = CleanerConfig.load(config_path)
+    except (ConfigError, yaml.YAMLError, OSError) as e:
+        print(f"Configuration error in {config_path}: {e}", file=sys.stderr)
+        return 1
     # CLI flags override config
     if args.dry_run:
         cfg.dry_run = True
@@ -330,15 +474,19 @@ def main() -> None:
         cfg.max_depth = args.max_depth
     if args.follow_symlinks:
         cfg.follow_symlinks = True
+    # Logging is configured before any warning is emitted (see load()).
     setup_logging(cfg)
+    for message in config_warnings:
+        logging.warning("%s", message)
     logging.info("Starting pycache cleaner (dry_run=%s)", cfg.dry_run)
     try:
         cleaner = PycacheCleaner(cfg)
         cleaner.run()
     except Exception as e:
         logging.exception("An unexpected error occurred: %s", e)
-        sys.exit(1)
+        return 1
+    return 1 if cleaner.failed_roots else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

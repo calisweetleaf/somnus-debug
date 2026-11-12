@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-78e3-70d9-bfc1-df53377ac8e8"
+#   revision: 1
+#   title: "Generate a class-by-class, definition-by-definition index for a Python file"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-78e3-70d9-bfc1-df53377ac8e8"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "generate-a-class-by-class-definition-by-definition-index-for-a-python-file"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-78e3-70d9-bfc1-df53377ac8e8"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """Generate a class-by-class, definition-by-definition index for a Python file.
 
 The analyzer is deliberately AST-only: it parses source without importing or
@@ -175,14 +207,25 @@ def build_index(
     include_module_functions: bool = True,
 ) -> str:
     """Build a deterministic Markdown/plain-text index from Python source."""
-    tree = ast.parse(source, filename=source_name, type_comments=True)
+    tree = ast.parse(source, filename=source_name)
     classes = [node for node in tree.body if isinstance(node, ast.ClassDef)]
     all_classes = sorted(
         (node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)),
         key=lambda node: (getattr(node, "lineno", 0), getattr(node, "col_offset", 0)),
     )
     rendered_class_ids = {id(node) for node in _iter_classes(tree.body)}
-    scoped_classes = [node for node in all_classes if id(node) not in rendered_class_ids]
+    # A class declared inside a function (or other non-class scope) is listed
+    # in its own section, and _render_class already renders the classes
+    # nested directly in its body.  Only scope roots go in that section;
+    # their class-in-class descendants are covered by the root's rendering
+    # (all_classes is in source order, so an outer class is seen first).
+    scoped_classes: list[ast.ClassDef] = []
+    for node in all_classes:
+        if id(node) in rendered_class_ids:
+            continue
+        scoped_classes.append(node)
+        rendered_class_ids.add(id(node))
+        rendered_class_ids.update(id(child) for child in _iter_classes(node.body))
     by_name: dict[str, list[ast.ClassDef]] = {}
     for node in all_classes:
         by_name.setdefault(node.name, []).append(node)
@@ -298,6 +341,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             include_lines=not args.no_line_numbers,
             include_module_functions=not args.no_module_functions,
         )
+    except UnicodeDecodeError as exc:
+        print(
+            f"error: {args.source}: not valid UTF-8 ({exc.reason} at byte {exc.start})",
+            file=sys.stderr,
+        )
+        return 2
     except (OSError, SyntaxError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

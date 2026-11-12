@@ -1,0 +1,34 @@
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-71da-75c5-87ba-fadbbd0fad8c"
+  revision: 1
+  title: "LICENSE"
+  classification:
+    category: "engineering"
+    type: "asset"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-71da-75c5-87ba-fadbbd0fad8c"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "license"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-71da-75c5-87ba-fadbbd0fad8c"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "mixed"
+  bindings:
+    - target: "LICENSE"
+      role: "primary"
+      required: true

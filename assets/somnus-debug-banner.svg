@@ -1,3 +1,35 @@
+<!-- somnus:metadata:v2
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-73b6-71fa-b741-5563ba98f8d2"
+  revision: 1
+  title: "Somnus Debug Banner"
+  classification:
+    category: "engineering"
+    type: "asset"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-73b6-71fa-b741-5563ba98f8d2"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "somnus-debug-banner"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-73b6-71fa-b741-5563ba98f8d2"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "mixed"
+somnus:end -->
 <svg width="460" height="200" viewBox="0 0 460 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="sdGrad" x1="0%" y1="0%" x2="100%" y2="100%">

@@ -1,0 +1,4 @@
+"""Test file; doctor should (per config) consider test gaps."""
+def test_x() -> None:
+    """Trivial test with a short body for the fixture only."""
+    assert True

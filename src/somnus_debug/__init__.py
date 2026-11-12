@@ -1,3 +1,35 @@
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-7779-77f9-bb91-8c2021b92bd6"
+#   revision: 1
+#   title: "somnusdebug: Somnus Sovereign Systems' Python developer toolkit"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-7779-77f9-bb91-8c2021b92bd6"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "somnusdebug-somnus-sovereign-systems-python-developer-toolkit"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-7779-77f9-bb91-8c2021b92bd6"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """somnus_debug: Somnus Sovereign Systems' Python developer toolkit.
 
 A pip-installable toolbox of project-agnostic diagnostic and maintenance
@@ -22,6 +54,17 @@ Tools currently in the toolkit:
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+from importlib import metadata as _metadata
+
+# The single source of truth for the version is pyproject.toml; an installed
+# distribution exposes it through its metadata.  Running from a source tree
+# (PYTHONPATH=src, no install) has no distribution, so fall back to the
+# release this tree was cut from.
+_SOURCE_TREE_VERSION = "0.1.0"
+
+try:
+    __version__ = _metadata.version("somnus-debug")
+except _metadata.PackageNotFoundError:
+    __version__ = _SOURCE_TREE_VERSION
 
 __all__ = ["__version__"]

@@ -1,3 +1,35 @@
+---
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-74c8-7557-8855-4f91bb5b7a30"
+  revision: 1
+  title: "Publishing somnus-debug"
+  classification:
+    category: "engineering"
+    type: "report"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-74c8-7557-8855-4f91bb5b7a30"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "publishing-somnus-debug"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-74c8-7557-8855-4f91bb5b7a30"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "narrative"
+---
 # Publishing somnus-debug
 
 **Publication status updated 2026-10-19:** the maintainer confirms Somnus Debug is published on PyPI. The public project page is [pypi.org/project/somnus-debug](https://pypi.org/project/somnus-debug/). This supersedes the historical 2026-09-01 check below, which preceded publication. The public repository is [calisweetleaf/somnus-debug](https://github.com/calisweetleaf/somnus-debug).

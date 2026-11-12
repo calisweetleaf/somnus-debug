@@ -1,0 +1,76 @@
+import ast, sys, os, csv
+ROOT = sys.argv[1]
+rows = []
+def sig(fn):
+    try:
+        a = ast.unparse(fn.args)
+    except Exception:
+        a = "?"
+    r = f" -> {ast.unparse(fn.returns)}" if fn.returns else ""
+    pre = "async def " if isinstance(fn, ast.AsyncFunctionDef) else "def "
+    return f"{pre}{fn.name}({a}){r}"
+def decos(n):
+    return [ast.unparse(d) for d in getattr(n,'decorator_list',[])]
+def walk(node, path, prefix, exports, depth, parent_kind):
+    for ch in ast.iter_child_nodes(node):
+        if isinstance(ch, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            q = prefix + ch.name
+            d = decos(ch)
+            kind = "method" if parent_kind=="class" else ("nested_function" if parent_kind=="function" else "function")
+            if "property" in d or any(x.endswith(".setter") for x in d): kind = "property" if "property" in d else "property_setter"
+            if "staticmethod" in d: kind="staticmethod"
+            if "classmethod" in d: kind="classmethod"
+            exp = "yes" if (depth==0 and ch.name in exports) else "no"
+            doc = (ast.get_docstring(ch) or "").split("\n")[0][:90]
+            notes = (("decorators="+",".join(d)+"; ") if d else "") + (f"end={ch.end_lineno}; ") + doc
+            rows.append((path, ch.lineno, kind, q, sig(ch), exp, notes))
+            walk(ch, path, q+".", exports, depth+1, "function")
+        elif isinstance(ch, ast.ClassDef):
+            q = prefix + ch.name
+            bases = [ast.unparse(b) for b in ch.bases]
+            d = decos(ch)
+            kind = "class"
+            if any("dataclass" in x for x in d): kind="dataclass"
+            if any(b in ("Enum","IntEnum","str, Enum") or b.endswith("Enum") for b in bases): kind="enum"
+            exp = "yes" if (depth==0 and ch.name in exports) else "no"
+            doc = (ast.get_docstring(ch) or "").split("\n")[0][:90]
+            fields = []
+            for s in ch.body:
+                if isinstance(s, ast.AnnAssign) and isinstance(s.target, ast.Name):
+                    fields.append(s.target.id + ":" + ast.unparse(s.annotation) + ("=" + ast.unparse(s.value)[:40] if s.value else ""))
+                elif isinstance(s, ast.Assign) and kind=="enum":
+                    fields.append(",".join(ast.unparse(t) for t in s.targets)+"="+ast.unparse(s.value)[:30])
+            notes = (("decorators="+",".join(d)+"; ") if d else "") + f"end={ch.end_lineno}; " + (("fields["+"; ".join(fields)+"]; ") if fields else "") + doc
+            rows.append((path, ch.lineno, kind, q, f"class {ch.name}({', '.join(bases)})", exp, notes))
+            walk(ch, path, q+".", exports, depth+1, "class")
+        elif depth==0 and isinstance(ch, (ast.Assign, ast.AnnAssign)):
+            targets = ch.targets if isinstance(ch, ast.Assign) else [ch.target]
+            for t in targets:
+                if isinstance(t, ast.Name):
+                    v = ast.unparse(ch.value)[:80].replace("\n"," ").replace("\t"," ") if ch.value else ""
+                    kind = "dunder" if t.id.startswith("__") else ("constant" if t.id.isupper() or t.id.lstrip("_").isupper() else "module_var")
+                    rows.append((path, ch.lineno, kind, t.id, f"{t.id} = {v}", "yes" if t.id in exports else "no", f"end={ch.end_lineno}"))
+        elif depth==0 and isinstance(ch, (ast.Import, ast.ImportFrom)):
+            for a in ch.names:
+                n = a.asname or a.name
+                if n in exports:
+                    mod = ("."*getattr(ch,'level',0)) + (getattr(ch,'module',None) or "")
+                    rows.append((path, ch.lineno, "reexport", n, f"from {mod} import {a.name}", "yes", "re-exported via __all__"))
+        elif depth==0 and isinstance(ch, (ast.Try, ast.If)):
+            walk(ch, path, prefix, exports, depth, parent_kind)
+for dp, dn, fn in os.walk(ROOT):
+    dn.sort()
+    for f in sorted(fn):
+        if not f.endswith(".py"): continue
+        p = os.path.join(dp, f)
+        src = open(p).read()
+        tree = ast.parse(src)
+        exports=set()
+        for n in tree.body:
+            if isinstance(n, ast.Assign) and any(isinstance(t,ast.Name) and t.id=="__all__" for t in n.targets):
+                exports = set(ast.literal_eval(n.value))
+        rel = os.path.relpath(p, os.path.dirname(os.path.dirname(ROOT)))
+        walk(tree, rel, "", exports, 0, "module")
+w = csv.writer(sys.stdout, delimiter="\t", lineterminator="\n")
+w.writerow(["path","line","kind","qualname","signature","exported","notes"])
+for r in rows: w.writerow([str(x).replace("\t"," ").replace("\n"," ") for x in r])

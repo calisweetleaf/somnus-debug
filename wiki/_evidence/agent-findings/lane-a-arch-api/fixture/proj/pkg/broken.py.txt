@@ -1,0 +1,3 @@
+"""Broken file with a syntax error for the detector."""
+def oops(:
+    pass

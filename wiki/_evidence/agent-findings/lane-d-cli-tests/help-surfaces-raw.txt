@@ -1,0 +1,522 @@
+### $ /tmp/lane-d/venv/bin/somnus-debug
+```
+somnus-debug 0.1.0 -- Somnus Sovereign Systems Python developer toolkit
+
+Usage:
+    somnus-debug <command> [command args...]
+
+Commands:
+    doctor              Production-readiness diagnostics (AST-based).
+    structure            Class/definition index for a single Python file.
+    pycache-clean        Remove __pycache__/*.pyc/*.pyo across directory trees.
+    init-test-harness    Scaffold the CONTRACT.md single-test harness into a repo.
+
+Each command owns its own --help; run e.g. `somnus-debug doctor --help`.
+Every command is also installed as its own script (somnus-doctor,
+somnus-structure, somnus-pycache-clean).
+
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug --help
+```
+somnus-debug 0.1.0 -- Somnus Sovereign Systems Python developer toolkit
+
+Usage:
+    somnus-debug <command> [command args...]
+
+Commands:
+    doctor              Production-readiness diagnostics (AST-based).
+    structure            Class/definition index for a single Python file.
+    pycache-clean        Remove __pycache__/*.pyc/*.pyo across directory trees.
+    init-test-harness    Scaffold the CONTRACT.md single-test harness into a repo.
+
+Each command owns its own --help; run e.g. `somnus-debug doctor --help`.
+Every command is also installed as its own script (somnus-doctor,
+somnus-structure, somnus-pycache-clean).
+
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug -V
+```
+0.1.0
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug --version
+```
+0.1.0
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug doctor --help
+```
+usage: somnus-debug doctor [-h]
+                           {scan,init-config,history,rollback,self-check} ...
+
+Python Production Doctor - production readiness diagnostics
+
+positional arguments:
+  {scan,init-config,history,rollback,self-check}
+    scan                scan a Python project
+    init-config         write default YAML configuration
+    history             show scan history
+    rollback            restore a previous report as latest
+    self-check          scan the directory containing this doctor
+
+options:
+  -h, --help            show this help message and exit
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug doctor scan --help
+```
+usage: somnus-debug doctor scan [-h] [-c CONFIG] [-o OUTPUT]
+                                [--json-output JSON_OUTPUT] [--no-state] [-v]
+                                [project_root]
+
+positional arguments:
+  project_root          project root directory to scan
+
+options:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        YAML or JSON configuration path
+  -o OUTPUT, --output OUTPUT
+                        markdown output path
+  --json-output JSON_OUTPUT
+                        JSON output path
+  --no-state            write reports without SQLite state tracking
+  -v, --verbose         enable debug logging
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug doctor init-config --help
+```
+usage: somnus-debug doctor init-config [-h] [-o OUTPUT] [--force]
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        configuration output path
+  --force               replace existing configuration
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug doctor history --help
+```
+usage: somnus-debug doctor history [-h] [-c CONFIG] [--limit LIMIT]
+                                   [project_root]
+
+positional arguments:
+  project_root          project root directory
+
+options:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        YAML or JSON configuration path
+  --limit LIMIT         maximum records to show
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug doctor rollback --help
+```
+usage: somnus-debug doctor rollback [-h] --run-id RUN_ID [-c CONFIG]
+                                    [project_root]
+
+positional arguments:
+  project_root          project root directory
+
+options:
+  -h, --help            show this help message and exit
+  --run-id RUN_ID       run identifier to restore
+  -c CONFIG, --config CONFIG
+                        YAML or JSON configuration path
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug doctor self-check --help
+```
+usage: somnus-debug doctor self-check [-h] [-c CONFIG] [-o OUTPUT]
+                                      [--json-output JSON_OUTPUT] [--no-state]
+
+options:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        YAML or JSON configuration path
+  -o OUTPUT, --output OUTPUT
+                        markdown output path
+  --json-output JSON_OUTPUT
+                        JSON output path
+  --no-state            write reports without SQLite state tracking
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug structure --help
+```
+usage: somnus-debug structure [-h] [-o OUTPUT | --update-doc PATH]
+                              [--no-line-numbers]
+                              [--source-label SOURCE_LABEL]
+                              [--no-module-functions]
+                              source
+
+Index Python classes and their definitions without executing the module.
+
+positional arguments:
+  source                Python source file to analyze
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Write the generated index to this path
+  --update-doc PATH     Regenerate an existing documentation/index file at
+                        PATH
+  --no-line-numbers     Omit source line spans from headings and definition
+                        entries
+  --source-label SOURCE_LABEL
+                        Name shown in the generated heading instead of the
+                        input filename
+  --no-module-functions
+                        Only emit classes and their methods
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug pycache-clean --help
+```
+usage: somnus-debug pycache-clean [-h] [--config CONFIG] [--dry-run]
+                                  [--verbose] [--max-depth MAX_DEPTH]
+                                  [--follow-symlinks]
+
+Remove Python bytecode caches across directory trees.
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       Path to YAML configuration file (default: config.yaml)
+  --dry-run             Perform a dry run without deleting anything
+  --verbose             Enable verbose logging output
+  --max-depth MAX_DEPTH
+                        Maximum recursion depth (overrides config)
+  --follow-symlinks     Follow symbolic links during traversal
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-debug init-test-harness --help
+```
+usage: somnus-debug init-test-harness [-h] [--force] [--no-contract] [target]
+
+Copy the CONTRACT.md single-test harness (run_test.py) into a target
+repository.
+
+positional arguments:
+  target         Directory to write run_test.py (and CONTRACT.md) into
+                 (default: current directory)
+
+options:
+  -h, --help     show this help message and exit
+  --force        Overwrite existing files at the destination
+  --no-contract  Only write run_test.py; skip copying CONTRACT.md alongside it
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-doctor --help
+```
+usage: somnus-doctor [-h] {scan,init-config,history,rollback,self-check} ...
+
+Python Production Doctor - production readiness diagnostics
+
+positional arguments:
+  {scan,init-config,history,rollback,self-check}
+    scan                scan a Python project
+    init-config         write default YAML configuration
+    history             show scan history
+    rollback            restore a previous report as latest
+    self-check          scan the directory containing this doctor
+
+options:
+  -h, --help            show this help message and exit
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-doctor scan --help
+```
+usage: somnus-doctor scan [-h] [-c CONFIG] [-o OUTPUT]
+                          [--json-output JSON_OUTPUT] [--no-state] [-v]
+                          [project_root]
+
+positional arguments:
+  project_root          project root directory to scan
+
+options:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        YAML or JSON configuration path
+  -o OUTPUT, --output OUTPUT
+                        markdown output path
+  --json-output JSON_OUTPUT
+                        JSON output path
+  --no-state            write reports without SQLite state tracking
+  -v, --verbose         enable debug logging
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-doctor init-config --help
+```
+usage: somnus-doctor init-config [-h] [-o OUTPUT] [--force]
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        configuration output path
+  --force               replace existing configuration
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-doctor history --help
+```
+usage: somnus-doctor history [-h] [-c CONFIG] [--limit LIMIT] [project_root]
+
+positional arguments:
+  project_root          project root directory
+
+options:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        YAML or JSON configuration path
+  --limit LIMIT         maximum records to show
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-doctor rollback --help
+```
+usage: somnus-doctor rollback [-h] --run-id RUN_ID [-c CONFIG] [project_root]
+
+positional arguments:
+  project_root          project root directory
+
+options:
+  -h, --help            show this help message and exit
+  --run-id RUN_ID       run identifier to restore
+  -c CONFIG, --config CONFIG
+                        YAML or JSON configuration path
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-doctor self-check --help
+```
+usage: somnus-doctor self-check [-h] [-c CONFIG] [-o OUTPUT]
+                                [--json-output JSON_OUTPUT] [--no-state]
+
+options:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        YAML or JSON configuration path
+  -o OUTPUT, --output OUTPUT
+                        markdown output path
+  --json-output JSON_OUTPUT
+                        JSON output path
+  --no-state            write reports without SQLite state tracking
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-structure --help
+```
+usage: somnus-structure [-h] [-o OUTPUT | --update-doc PATH]
+                        [--no-line-numbers] [--source-label SOURCE_LABEL]
+                        [--no-module-functions]
+                        source
+
+Index Python classes and their definitions without executing the module.
+
+positional arguments:
+  source                Python source file to analyze
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Write the generated index to this path
+  --update-doc PATH     Regenerate an existing documentation/index file at
+                        PATH
+  --no-line-numbers     Omit source line spans from headings and definition
+                        entries
+  --source-label SOURCE_LABEL
+                        Name shown in the generated heading instead of the
+                        input filename
+  --no-module-functions
+                        Only emit classes and their methods
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/somnus-pycache-clean --help
+```
+usage: somnus-pycache-clean [-h] [--config CONFIG] [--dry-run] [--verbose]
+                            [--max-depth MAX_DEPTH] [--follow-symlinks]
+
+Remove Python bytecode caches across directory trees.
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       Path to YAML configuration file (default: config.yaml)
+  --dry-run             Perform a dry run without deleting anything
+  --verbose             Enable verbose logging output
+  --max-depth MAX_DEPTH
+                        Maximum recursion depth (overrides config)
+  --follow-symlinks     Follow symbolic links during traversal
+```
+exit=0
+
+### $ /tmp/lane-d/venv/bin/python -m somnus_debug.test_harness.scaffold --help
+```
+usage: somnus-debug init-test-harness [-h] [--force] [--no-contract] [target]
+
+Copy the CONTRACT.md single-test harness (run_test.py) into a target
+repository.
+
+positional arguments:
+  target         Directory to write run_test.py (and CONTRACT.md) into
+                 (default: current directory)
+
+options:
+  -h, --help     show this help message and exit
+  --force        Overwrite existing files at the destination
+  --no-contract  Only write run_test.py; skip copying CONTRACT.md alongside it
+```
+exit=0
+
+### $ env PYTHONPATH=/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/src python3 -m somnus_debug.cli --help
+```
+somnus-debug 0.1.0 -- Somnus Sovereign Systems Python developer toolkit
+
+Usage:
+    somnus-debug <command> [command args...]
+
+Commands:
+    doctor              Production-readiness diagnostics (AST-based).
+    structure            Class/definition index for a single Python file.
+    pycache-clean        Remove __pycache__/*.pyc/*.pyo across directory trees.
+    init-test-harness    Scaffold the CONTRACT.md single-test harness into a repo.
+
+Each command owns its own --help; run e.g. `somnus-debug doctor --help`.
+Every command is also installed as its own script (somnus-doctor,
+somnus-structure, somnus-pycache-clean).
+
+```
+exit=0
+
+### $ python3 /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/python_production_doctor.py --help
+```
+usage: python_production_doctor.py [-h]
+                                   {scan,init-config,history,rollback,self-check}
+                                   ...
+
+Python Production Doctor - production readiness diagnostics
+
+positional arguments:
+  {scan,init-config,history,rollback,self-check}
+    scan                scan a Python project
+    init-config         write default YAML configuration
+    history             show scan history
+    rollback            restore a previous report as latest
+    self-check          scan the directory containing this doctor
+
+options:
+  -h, --help            show this help message and exit
+```
+exit=0
+
+### $ python3 /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/analyze_python_structure.py --help
+```
+usage: analyze_python_structure.py [-h] [-o OUTPUT | --update-doc PATH]
+                                   [--no-line-numbers]
+                                   [--source-label SOURCE_LABEL]
+                                   [--no-module-functions]
+                                   source
+
+Index Python classes and their definitions without executing the module.
+
+positional arguments:
+  source                Python source file to analyze
+
+options:
+  -h, --help            show this help message and exit
+  -o OUTPUT, --output OUTPUT
+                        Write the generated index to this path
+  --update-doc PATH     Regenerate an existing documentation/index file at
+                        PATH
+  --no-line-numbers     Omit source line spans from headings and definition
+                        entries
+  --source-label SOURCE_LABEL
+                        Name shown in the generated heading instead of the
+                        input filename
+  --no-module-functions
+                        Only emit classes and their methods
+```
+exit=0
+
+### $ python3 /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/pycache_cleaner.py --help
+```
+/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/pycache_cleaner.py:64: SyntaxWarning: invalid escape sequence '\`'
+  * **Windows long path support:** Paths are normalized to the ``\\?\``
+usage: pycache_cleaner.py [-h] [--config CONFIG] [--dry-run] [--verbose]
+                          [--max-depth MAX_DEPTH] [--follow-symlinks]
+
+Remove Python bytecode caches across directory trees.
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       Path to YAML configuration file (default: config.yaml)
+  --dry-run             Perform a dry run without deleting anything
+  --verbose             Enable verbose logging output
+  --max-depth MAX_DEPTH
+                        Maximum recursion depth (overrides config)
+  --follow-symlinks     Follow symbolic links during traversal
+```
+exit=0
+
+### $ python3 /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/run_test.py --help
+```
+00:12:27 INFO     ========================================================================
+00:12:27 INFO     GOLDEN PATH LAYER 1 DATA HIGHWAY RESTORATION
+00:12:27 INFO     Run ID: GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7
+00:12:27 INFO     Artifacts: /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/test-runs/GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7
+00:12:27 INFO     ========================================================================
+00:12:27 INFO     $ cargo metadata --no-deps --format-version 1 --locked
+00:12:27 ERROR    Test execution failed
+Traceback (most recent call last):
+  File "/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/run_test.py", line 785, in main
+    outcome = execute_test(ctx)
+              ^^^^^^^^^^^^^^^^^
+  File "/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/run_test.py", line 234, in execute_test
+    _run_command(
+  File "/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/run_test.py", line 513, in _run_command
+    completed = subprocess.run(
+                ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/subprocess.py", line 548, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/usr/local/lib/python3.12/subprocess.py", line 1955, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'cargo'
+00:12:27 INFO     ========================================================================
+00:12:27 INFO     FINAL VERDICT: FAIL
+00:12:27 INFO     manifest.json: /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/test-runs/GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7/manifest.json
+00:12:27 INFO     report.md:     /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/test-runs/GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7/report.md
+00:12:27 INFO     test.log:      /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/test-runs/GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7/test.log
+00:12:27 INFO     ========================================================================
+
+{
+  "run_id": "GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7",
+  "test_name": "GOLDEN PATH LAYER 1 DATA HIGHWAY RESTORATION",
+  "verdict": "FAIL",
+  "elapsed_s": 0.003219,
+  "artifacts": {
+    "manifest": "/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/test-runs/GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7/manifest.json",
+    "report": "/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/test-runs/GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7/report.md",
+    "log": "/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/test-runs/GOLDEN-PATH-LAYER-1-DATA-HIGHWAY-RESTORATION-20261112-001227-e542a7/test.log"
+  }
+}
+```
+exit=1
+

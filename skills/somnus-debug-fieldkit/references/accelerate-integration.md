@@ -1,3 +1,35 @@
+---
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-7589-743d-84e0-7349d6563980"
+  revision: 1
+  title: "Somnus Accelerate integration"
+  classification:
+    category: "engineering"
+    type: "report"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-7589-743d-84e0-7349d6563980"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "somnus-accelerate-integration"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-7589-743d-84e0-7349d6563980"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "narrative"
+---
 # Somnus Accelerate integration
 
 `somnus-debug` and Somnus Accelerate have separate operational jobs and connect cleanly through evidence.

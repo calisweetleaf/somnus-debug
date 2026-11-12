@@ -1,3 +1,35 @@
+---
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-7215-76aa-bff6-f7af11c99839"
+  revision: 1
+  title: "What this is"
+  classification:
+    category: "context"
+    type: "index"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-7215-76aa-bff6-f7af11c99839"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "what-this-is"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-7215-76aa-bff6-f7af11c99839"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "narrative"
+---
 <div align="center">
 
   <img src="assets/somnus-debug-banner.svg" width="460" alt="somnus-debug — Python Developer Toolkit" />
@@ -42,7 +74,7 @@ assets/somnus-debug-banner.svg and is referenced above.
   <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-667eea?style=flat-square" alt="Python 3.10-3.12"/>
   <img src="https://img.shields.io/badge/PyPI-now%20published-febc2e?style=flat-square" alt="Now on PyPI"/>
   <img src="https://img.shields.io/badge/Status-Alpha-febc2e?style=flat-square" alt="Status: Alpha"/>
-  <img src="https://img.shields.io/badge/Tests-10%2F10%20passing-28c840?style=flat-square" alt="10/10 tests passing"/>
+  <img src="https://img.shields.io/badge/Tests-163%2F163%20passing-28c840?style=flat-square" alt="163/163 tests passing"/>
 </p>
 
 ---
@@ -142,9 +174,14 @@ CLI instead of loose scripts. Now available as a PyPi published package.
 [somnus-debug](https://pypi.org/project/somnus-debug/)
 
 **Zero runtime dependencies beyond `pyyaml`**, and that's only for
-`pycache-clean` — `doctor` and `structure` are stdlib-only.
+`pycache-clean` — `doctor`, `structure`, and `init-test-harness` are
+stdlib-only and run through `somnus-debug` even when PyYAML is not installed.
+Without PyYAML, `somnus-debug pycache-clean` prints one line naming the
+missing dependency and exits `1`.
 
 ## Install
+
+Install from PyPI, or from a checkout when you are working on the package itself.
 
 ### Recommended
 
@@ -162,15 +199,18 @@ pip install -e .
 
 ## The tools
 
+Each command is an independent tool behind one dispatcher, with its own flags and `--help`.
+
 | Command | What it does |
 |---|---|
 | `somnus-debug doctor ...` | AST-based production-readiness diagnostics: stubs, placeholder returns, silent exception handling, dependency cycles, docstring/type-hint coverage, security-risk patterns, TODOs. |
 | `somnus-debug structure <file.py>` | Class-by-class, definition-by-definition AST index of a single Python file, with source line spans. Never imports or executes the target. |
-| `somnus-debug pycache-clean ...` | Configurable removal of `__pycache__` dirs and `*.pyc`/`*.pyo` files across one or more directory trees. Dry-run by default via `--dry-run`. |
-| `somnus-debug init-test-harness [dir]` | Copies the CONTRACT.md-governed single-test harness (`run_test.py`) into a target repository. |
+| `somnus-debug pycache-clean ...` | Configurable removal of `__pycache__` dirs and `*.pyc`/`*.pyo` files across one or more directory trees. Nothing is deleted when `--dry-run` or `dry_run: true` is set; the default is a live run. |
+| `somnus-debug init-test-harness [dir]` | Copies the CONTRACT.md-governed single-test harness (`run_test.py`) into a target repository, at its root or any subdirectory; the harness finds its project root at run time. |
 
 Every tool is also installed as its own script for muscle memory:
-`somnus-doctor`, `somnus-structure`, `somnus-pycache-clean`.
+`somnus-doctor`, `somnus-structure`, `somnus-pycache-clean`,
+`somnus-init-test-harness`.
 
 > **somnus-debug · quickstart** · `SESSION`
 
@@ -181,14 +221,16 @@ Successfully installed somnus-debug-0.1.0
 daeron@somnus:~$ somnus-debug doctor init-config -o python_doctor.yaml
 Wrote default configuration: python_doctor.yaml
 
-daeron@somnus:~$ somnus-debug doctor scan . -o report.md
+daeron@somnus:~$ somnus-debug doctor scan . -c python_doctor.yaml -o report.md
 Scan complete: files=42, issues=118, critical=0, serious=9
+Markdown report: /home/daeron/project/report.md
+JSON report: /home/daeron/project/report.json
+...
 
 daeron@somnus:~$ somnus-debug structure src/core.py -o CORE_INDEX.md
-Class Index for `core.py` written to CORE_INDEX.md
 
 daeron@somnus:~$ somnus-debug pycache-clean --config config.yaml --dry-run
-Summary: deleted 6 directories, 0 files; freed 2.10 MiB # dry run — nothing actually removed
+... Summary: would delete 6 directories, 0 files; would free 2.10 MiB
 
 daeron@somnus:~$ █
 ```
@@ -224,6 +266,10 @@ console block above is the GitHub-renderable equivalent.
 </div>
 -->
 
+`doctor` never reads a `python_doctor.yaml` on its own: without `-c`, every
+scan uses the built-in defaults, even when that file sits in the project root.
+`structure -o` writes the index and prints nothing.
+
 Full flag reference and worked examples for every command:
 **[`docs/MANUAL.md`](docs/MANUAL.md)**.
 
@@ -236,13 +282,13 @@ not what's planned.
 
 | Component | Progress | Status |
 |---|:---:|---|
-| Package skeleton | `██████████ 100%` | ✅ verified |
-| doctor / structure / pycache-clean | `██████████ 100%` | ✅ verified |
-| init-test-harness | `██████████ 100%` | ✅ verified |
-| Wheel build + install | `██████████ 100%` | ✅ verified |
+| Package skeleton | `██████████ 100%` | verified |
+| doctor / structure / pycache-clean | `██████████ 100%` | verified |
+| init-test-harness | `██████████ 100%` | verified |
+| Wheel build + install | `██████████ 100%` | verified |
 | public release synchronization | `████████░░ 80%` | release candidate verified |
-| PyPI publication | `██████████ 100%` | ✅ published — [PyPI](https://pypi.org/project/somnus-debug/) |
-| doctor / structure feature expansion | `░░░░░░░░░░ 0%` | ❌ not started |
+| PyPI publication | `██████████ 100%` | published — [PyPI](https://pypi.org/project/somnus-debug/) |
+| doctor / structure feature expansion | `░░░░░░░░░░ 0%` | not started |
 
 <!--
 ORIGINAL BUILD-STATUS TERMINAL HTML — preserved verbatim.
@@ -295,9 +341,11 @@ above is the GitHub-renderable equivalent.
 </div>
 -->
 
-> **Release status.** Somnus Debug is published on PyPI; install with `pip install somnus-debug`. The [PyPI project page](https://pypi.org/project/somnus-debug/) is the live distribution listing. The TestPyPI-first checklist in `docs/PUBLISHING.md` applies to subsequent versions. The old root-level scripts (`python_production_doctor.py`, `analyze_python_structure.py`, `pycache_cleaner.py`, `run_test.py`, `python_doctor.yaml`) remain pending cleanup — harmless, just redundant.
+> **Release status.** Somnus Debug is published on PyPI; install with `pip install somnus-debug`. The [PyPI project page](https://pypi.org/project/somnus-debug/) is the live distribution listing. The TestPyPI-first checklist in `docs/PUBLISHING.md` applies to subsequent versions. The old root-level scripts (`python_production_doctor.py`, `analyze_python_structure.py`, `pycache_cleaner.py`, `run_test.py`, `python_doctor.yaml`) remain pending cleanup. They are not part of the package and do not carry the fixes made in `src/`, so use the installed commands instead.
 
 ## Using it as a library
+
+Every tool's implementation is importable from `somnus_debug.<tool>.core`.
 
 ```python
 from somnus_debug.structure.core import build_index
@@ -305,11 +353,16 @@ from somnus_debug.doctor.core import ProjectScanner, ConfigManager
 from somnus_debug.pycache_cleaner.core import PycacheCleaner, CleanerConfig
 ```
 
-Each `core.py` is the original single-file implementation, moved into the
-package rather than rewritten — anything importable from the standalone
-script is importable from `somnus_debug.<tool>.core` too.
+Each `core.py` started as the original single-file implementation, moved into
+the package rather than rewritten, and has since been fixed in place; the
+root-level copies are not kept in sync. To change a loaded doctor
+configuration, call `ConfigManager.replace(**changes)`: it validates the new
+values and recomputes `config_hash`, and leaves the manager unchanged when a
+value is rejected.
 
 ## Repository layout
+
+The package lives under `src/`, its tests under `tests/`, and the public docs under `docs/`.
 
 ```
 pyproject.toml              package metadata, deps, entry points
@@ -323,19 +376,19 @@ src/somnus_debug/
     structure/core.py          = old analyze_python_structure.py
     pycache_cleaner/core.py    = old pycache_cleaner.py
     test_harness/scaffold.py + templates/{run_test.py, CONTRACT.md}
-    tests/test_cli_smoke.py      10 real subprocess CLI smoke tests
+tests/                       CLI smoke tests and per-tool regression tests (pytest)
 docs/
     MANUAL.md                  full command reference (start here for usage)
     PUBLISHING.md               the real-PyPI-release checklist
     CONTRACT.md                 governs run_test.py's artifact contract
-    OPSEC.md                    Somnus agent operational security protocol
+    AGENTS_APPENDIX.md          pasteable agent guidance
     Python_Doctor_QUICKSTART.md  deep config-field reference for `doctor`
 ```
 
 ## Documentation index
 
-- **[STATE.md](STATE.md)** — what actually exists and works right now, verified not assumed.
-- **[PLAN.md](PLAN.md)** — what's next, in dependency order.
+These are the public documents, in the order most readers need them.
+
 - **[skills/somnus-debug-fieldkit/SKILL.md](skills/somnus-debug-fieldkit/SKILL.md)** — canonical agent skill and router to its references.
 - **[docs/MANUAL.md](docs/MANUAL.md)** — day-to-day command reference, every
   flag, worked examples, troubleshooting.
@@ -348,8 +401,6 @@ docs/
   full `python_doctor.yaml` field reference.
 - **[docs/CONTRACT.md](docs/CONTRACT.md)** — what `run_test.py` does and
   does not own.
-- **[docs/OPSEC.md](docs/OPSEC.md)** — SUPREME-authority agent security
-  posture for this codebase.
 
 ---
 

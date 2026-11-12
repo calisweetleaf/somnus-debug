@@ -1,0 +1,15 @@
+"""Module a: imports b to form a dependency cycle for the doctor."""
+import os
+import json  # unused on purpose
+import nonexistent_mod_xyz
+from pkg import b
+from . import missing_sibling
+
+
+def uses_b(value: int) -> int:
+    """Call into module b so the cycle is real at import level."""
+    total = value
+    total += b.helper(value)
+    total += len(os.sep)
+    total *= 2
+    return total

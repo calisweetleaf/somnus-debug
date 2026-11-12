@@ -1,0 +1,47 @@
+path	kind	lines	inspected_by	depth	notes
+LICENSE	meta	21	lead (inventory only)	listed	
+LICENSE.somnus.yaml	meta	34	lead (inventory only)	listed	
+README.md	meta	409	F (claim reconciliation)	read	
+analyze_python_structure.py	root-duplicate-script	351	A,B,D (diffed vs src)	diffed	
+assets/somnus-debug-banner.svg	meta	52	lead (inventory only)	listed	
+assets/somnus-sovereign-systems-footer.svg	meta	38	lead (inventory only)	listed	
+docs/AGENTS_APPENDIX.md	doc	97	F (claim reconciliation)	read	
+docs/CONTRACT.md	doc	149	F (claim reconciliation)	read	
+docs/MANUAL.md	doc	418	F (claim reconciliation)	read	
+docs/PUBLISHING.md	doc	153	F (claim reconciliation)	read	
+docs/Python_Doctor_QUICKSTART.md	doc	252	F (claim reconciliation)	read	
+pycache_cleaner.py	root-duplicate-script	375	A,B,D (diffed vs src)	diffed	
+pyproject.toml	meta	101	A,D (entry points, deps)	read	
+python_doctor.yaml	meta	96	A,B,D (diffed vs src)	diffed	
+python_production_doctor.py	root-duplicate-script	2192	A,B,D (diffed vs src)	diffed	
+run_test.py	root-duplicate-script	859	A,B,D (diffed vs src)	diffed	
+skills/somnus-debug-fieldkit/README.md	fieldkit-doc	72	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/SKILL.md	fieldkit-doc	129	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/accelerate-integration.md	fieldkit-doc	64	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/automation.md	fieldkit-doc	75	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/commands.md	fieldkit-doc	139	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/doctor-loop.md	fieldkit-doc	100	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/findings.md	fieldkit-doc	146	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/install.md	fieldkit-doc	84	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/onboarding.md	fieldkit-doc	84	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/provenance.md	fieldkit-doc	88	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/references/topology.md	fieldkit-doc	131	F (claim reconciliation)	read	
+skills/somnus-debug-fieldkit/scripts/delta.py	fieldkit-script	259	D,F (executed)	executed	
+skills/somnus-debug-fieldkit/scripts/onboard.py	fieldkit-script	534	D,F (executed)	executed	
+skills/somnus-debug-fieldkit/scripts/selftest.py	fieldkit-script	350	D,F (executed)	executed	
+skills/somnus-debug-fieldkit/templates/AGENTS_APPENDIX.md	fieldkit-doc	55	F (claim reconciliation)	read	
+src/somnus_debug/__init__.py	package-source	59	A (exports import-verified)	executed	
+src/somnus_debug/cli.py	package-source	128	A,B,D	executed	
+src/somnus_debug/doctor/__init__.py	package-source	45	A (exports import-verified)	executed	
+src/somnus_debug/doctor/core.py	package-source	2203	A,B,D,F	executed	
+src/somnus_debug/doctor/default_config.yaml	package-data	99	B,D (compared to init-config and PyPI)	read	
+src/somnus_debug/pycache_cleaner/__init__.py	package-source	43	A (exports import-verified)	executed	
+src/somnus_debug/pycache_cleaner/core.py	package-source	375	A,B,D	executed	
+src/somnus_debug/structure/__init__.py	package-source	43	A (exports import-verified)	executed	
+src/somnus_debug/structure/core.py	package-source	351	A,B,D	executed	
+src/somnus_debug/test_harness/__init__.py	package-source	32	A (exports import-verified)	executed	
+src/somnus_debug/test_harness/scaffold.py	package-source	129	A,B,D,F	executed	
+src/somnus_debug/test_harness/templates/CONTRACT.md	package-data	149	lead (inventory only)	listed	
+src/somnus_debug/test_harness/templates/__init__.py	package-source	32	A (exports import-verified)	executed	
+src/somnus_debug/test_harness/templates/run_test.py	package-source	859	A,B,D,F	executed	
+tests/test_cli_smoke.py	test	181	D (executed)	executed	

@@ -1,0 +1,192 @@
+Y01 plain scalar int
+   doctor: OK {'a': 5}
+   pyyaml: OK {'a': 5}
+   agree=True
+Y02 float
+   doctor: OK {'a': 5.0}
+   pyyaml: OK {'a': 5.0}
+   agree=True
+Y03 exponent float
+   doctor: OK {'a': '1e3'}
+   pyyaml: OK {'a': '1e3'}
+   agree=True
+Y04 yes/no/on/off
+   doctor: OK {'a': 'yes', 'b': 'no', 'c': 'on', 'd': 'off'}
+   pyyaml: OK {'a': True, 'b': False, 'c': True, 'd': False}
+   agree=False
+Y05 True/FALSE case
+   doctor: OK {'a': True, 'b': False}
+   pyyaml: OK {'a': True, 'b': False}
+   agree=True
+Y06 null forms
+   doctor: OK {'a': None, 'b': None, 'c': None, 'd': None}
+   pyyaml: OK {'a': None, 'b': None, 'c': 'None', 'd': None}
+   agree=False
+Y07 empty value at EOF
+   doctor: ConfigurationError 'Expected an indented child block. {"path": "/tmp/tmpkeqb1kzj.yaml", "line": 1}'
+   pyyaml: OK {'a': None}
+   agree=False
+Y08 empty value then sibling
+   doctor: ConfigurationError 'Expected an indented child block. {"path": "/tmp/tmp4_2hsl66.yaml", "line": 1}'
+   pyyaml: OK {'a': None, 'b': 1}
+   agree=False
+Y09 quoted with hash
+   doctor: OK {'a': 'x # y', 'b': 'x'}
+   pyyaml: OK {'a': 'x # y', 'b': 'x'}
+   agree=True
+Y10 unquoted hash no space
+   doctor: OK {'a': 'x'}
+   pyyaml: OK {'a': 'x#y'}
+   agree=False
+Y11 flow list
+   doctor: OK {'a': ['*.py', 'src/*.py']}
+   pyyaml: OK {'a': ['*.py', 'src/*.py']}
+   agree=True
+Y12 flow list with comma in quotes
+   doctor: OK {'a': ['"a', 'b"', 'c']}
+   pyyaml: OK {'a': ['a,b', 'c']}
+   agree=False
+Y13 flow mapping
+   doctor: OK {'a': '{b: 1}'}
+   pyyaml: OK {'a': {'b': 1}}
+   agree=False
+Y14 nested flow list
+   doctor: OK {'a': ['[1', '2]', 3]}
+   pyyaml: OK {'a': [[1, 2], 3]}
+   agree=False
+Y15 block list of mappings
+   doctor: ConfigurationError 'Unexpected indentation. {"path": "/tmp/tmpu29jsefs.yaml", "line": 3, "indent": 4, "expected": 2}'
+   pyyaml: OK {'a': [{'b': 1, 'c': 2}]}
+   agree=False
+Y16 list item with nested block
+   doctor: ConfigurationError 'Expected key followed by colon. {"path": "/tmp/tmpif3_ddcm.yaml", "line": 2, "content": "-"}'
+   pyyaml: OK {'a': [{'b': 1}]}
+   agree=False
+Y17 key with colon in value
+   doctor: OK {'a': 'http://x:80/y'}
+   pyyaml: OK {'a': 'http://x:80/y'}
+   agree=True
+Y18 quoted key
+   doctor: OK {'"a b"': 1}
+   pyyaml: OK {'a b': 1}
+   agree=False
+Y19 tabs indent
+   doctor: ConfigurationError 'Expected an indented child block. {"path": "/tmp/tmpqme2mbvt.yaml", "line": 1}'
+   pyyaml: ScannerError 'while scanning for the next token'
+   agree=False
+Y20 inconsistent indent
+   doctor: ConfigurationError 'Unexpected indentation. {"path": "/tmp/tmpf2g15y_f.yaml", "line": 3, "indent": 2, "expected": 0}'
+   pyyaml: ParserError 'while parsing a block mapping'
+   agree=False
+Y21 dash without space
+   doctor: ConfigurationError 'Expected key followed by colon. {"path": "/tmp/tmpxm281vmy.yaml", "line": 2, "content": "-x"}'
+   pyyaml: OK {'a': '-x'}
+   agree=False
+Y22 block scalar |
+   doctor: ConfigurationError 'Unexpected indentation. {"path": "/tmp/tmpduau_eco.yaml", "line": 2, "indent": 2, "expected": 0}'
+   pyyaml: OK {'a': 'line1\nline2'}
+   agree=False
+Y23 anchors/alias
+   doctor: OK {'a': '&x 1', 'b': '*x'}
+   pyyaml: OK {'a': 1, 'b': 1}
+   agree=False
+Y24 document marker ---
+   doctor: ConfigurationError 'Expected key followed by colon. {"path": "/tmp/tmppj0cf8l4.yaml", "line": 1, "content": "---"}'
+   pyyaml: OK {'a': 1}
+   agree=False
+Y25 duplicate keys
+   doctor: OK {'a': 2}
+   pyyaml: OK {'a': 2}
+   agree=True
+Y26 single-quoted escape ''
+   doctor: OK {'a': 'its'}
+   pyyaml: OK {'a': "it's"}
+   agree=False
+Y27 double-quoted escape \n
+   doctor: OK {'a': 'x\ny'}
+   pyyaml: OK {'a': 'x\ny'}
+   agree=True
+Y28 octal/hex
+   doctor: OK {'a': '0o17', 'b': '0x1F', 'c': 10}
+   pyyaml: OK {'a': '0o17', 'b': 31, 'c': 8}
+   agree=False
+Y29 leading zero int
+   doctor: OK {'a': 7}
+   pyyaml: OK {'a': 7}
+   agree=True
+Y30 list root
+   doctor: ConfigurationError 'Configuration root must be a mapping. {"path": "/tmp/tmp1nlw2b9l.yaml", "root_type": "list"}'
+   pyyaml: OK ['a', 'b']
+   agree=False
+Y31 empty file
+   doctor: OK {}
+   pyyaml: OK None
+   agree=True
+Y32 only comments
+   doctor: OK {}
+   pyyaml: OK None
+   agree=True
+Y33 quoted number
+   doctor: OK {'a': '5'}
+   pyyaml: OK {'a': '5'}
+   agree=True
+Y34 sequence at same indent as key (PyYAML compact)
+   doctor: ConfigurationError 'Expected an indented child block. {"path": "/tmp/tmpiu_tq67x.yaml", "line": 1}'
+   pyyaml: OK {'a': ['x', 'y']}
+   agree=False
+Y35 trailing spaces after value
+   doctor: OK {'a': 5}
+   pyyaml: OK {'a': 5}
+   agree=True
+Y36 mismatched quotes
+   doctor: OK {'a': '"x\''}
+   pyyaml: ScannerError 'while scanning a quoted scalar'
+   agree=False
+Y37 flow list with null
+   doctor: OK {'a': [None, None, True]}
+   pyyaml: OK {'a': [None, None, True]}
+   agree=True
+Y38 empty flow list item
+   doctor: OK {'a': [1, 2]}
+   pyyaml: ParserError 'while parsing a flow node'
+   agree=False
+Y39 negative int
+   doctor: OK {'a': -1}
+   pyyaml: OK {'a': -1}
+   agree=True
+Y40 dash item looks like neg number
+   doctor: OK {'a': [-1]}
+   pyyaml: OK {'a': [-1]}
+   agree=True
+Y41 key-only no colon
+   doctor: ConfigurationError 'Expected key followed by colon. {"path": "/tmp/tmpk7t6nnqv.yaml", "line": 1, "content": "a"}'
+   pyyaml: OK 'a'
+   agree=False
+Y42 windows CRLF
+   doctor: OK {'a': 1, 'b': 2}
+   pyyaml: OK {'a': 1, 'b': 2}
+   agree=True
+Y43 BOM
+   doctor: OK {'\ufeffa': 1}
+   pyyaml: OK {'a': 1}
+   agree=False
+Y44 Python-escape in double quote that YAML rejects
+   doctor: OK {'a': '\\q'}
+   pyyaml: ScannerError 'while scanning a double-quoted scalar'
+   agree=False
+Y45 quoted value with trailing comment
+   doctor: OK {'a': 'x'}
+   pyyaml: OK {'a': 'x'}
+   agree=True
+Y46 inf/nan
+   doctor: OK {'a': '.inf', 'b': '.nan'}
+   pyyaml: OK {'a': inf, 'b': nan}
+   agree=False
+Y47 underscore int
+   doctor: OK {'a': '1_000'}
+   pyyaml: OK {'a': 1000}
+   agree=False
+Y48 string 'none' lowercase
+   doctor: OK {'a': None}
+   pyyaml: OK {'a': 'none'}
+   agree=False

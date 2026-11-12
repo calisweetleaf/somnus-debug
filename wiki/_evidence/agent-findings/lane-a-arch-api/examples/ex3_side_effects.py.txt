@@ -1,0 +1,27 @@
+import logging, os, sys, yaml
+from pathlib import Path
+os.chdir("ex3")
+h = logging.StreamHandler(sys.stderr); logging.getLogger().addHandler(h)
+print("host handlers before:", logging.getLogger().handlers)
+from somnus_debug.doctor.core import main, MinimalYamlParser, ConfigManager, normalize_argv
+rc = main(["scan", "proj", "--no-state", "-o", "out/r.md"])
+print("main() returned", rc)
+print("host handlers after:", logging.getLogger().handlers, "level", logging.getLogger().level)
+print("cwd files:", sorted(os.listdir(".")), "out:", sorted(os.listdir("out")))
+print("normalize_argv:", normalize_argv([]), normalize_argv(["proj"]), normalize_argv(["-v"]), normalize_argv(["history"]))
+for name in ["root_python_doctor.yaml", "default_config.yaml"]:
+    mine = MinimalYamlParser(Path(name)).parse(); ref = yaml.safe_load(open(name))
+    diff = {k: (mine.get(k), ref.get(k)) for k in set(mine) | set(ref) if mine.get(k) != ref.get(k)}
+    print(name, "keys", len(mine), "diff vs PyYAML:", diff)
+    try:
+        cm = ConfigManager(Path(name)); print("  ConfigManager OK gate=", cm.config.severity_exit_level, "workers", cm.config.max_workers)
+    except Exception as e:
+        print("  ConfigManager FAIL", type(e).__name__, e.message, e.context)
+# YAML subset edge: unquoted none
+Path("none.yaml").write_text("severity_exit_level: none\n")
+print("unquoted none parses to:", MinimalYamlParser(Path("none.yaml")).parse())
+Path("flow.yaml").write_text("severity_levels: {stubs: minor}\n")
+try: print(MinimalYamlParser(Path("flow.yaml")).parse())
+except Exception as e: print("flow mapping:", type(e).__name__)
+try: ConfigManager(Path("flow.yaml"))
+except Exception as e: print("flow mapping ConfigManager:", type(e).__name__, e.message)

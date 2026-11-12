@@ -1,0 +1,19 @@
+import logging, sys, os
+from pathlib import Path
+from somnus_debug.pycache_cleaner.core import CleanerConfig, PycacheCleaner, setup_logging
+logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, format="  log %(levelname)s %(message)s")
+def tree(): return sorted(str(p.relative_to("ex5/tree")) for p in Path("ex5/tree").rglob("*"))
+before = tree()
+cfg = CleanerConfig(roots=["ex5/tree"], exclude=["node_modules"], dry_run=True)
+c = PycacheCleaner(cfg); r = c.run()
+print("dry run returned", r, "dirs", c.deleted_dirs, "files", c.deleted_files, "bytes", c.deleted_bytes, "unchanged:", tree()==before)
+print("cfg.roots after normalize (mutated in place):", cfg.roots)
+cfg2 = CleanerConfig(roots=["ex5/tree"], exclude=["node_modules"], max_depth=1)
+c2 = PycacheCleaner(cfg2); c2.run()
+print("live max_depth=1: dirs", c2.deleted_dirs, "files", c2.deleted_files, "remaining:", tree())
+# hazard: roots given as a bare string (as a YAML scalar would) -- normalize only, NEVER run
+cfg3 = CleanerConfig(roots="/tmp/lane-a/lib/ex5/tree")
+PycacheCleaner(cfg3)
+print("roots='/tmp/...' (str) normalizes to:", cfg3.roots[:6], "... count", len(cfg3.roots))
+try: PycacheCleaner(CleanerConfig())
+except ValueError as e: print("no roots ->", type(e).__name__, e)

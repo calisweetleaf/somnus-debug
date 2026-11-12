@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-79a0-7054-9b74-e0ee36ffb16a"
+#   revision: 1
+#   title: "Agnostic Single-Test Harness"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-79a0-7054-9b74-e0ee36ffb16a"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "agnostic-single-test-harness"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-79a0-7054-9b74-e0ee36ffb16a"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """
 Agnostic Single-Test Harness
 ============================
@@ -17,12 +49,17 @@ stable execution/artifact contract:
         -> test.log        (raw execution truth)
         -> one final PASS/FAIL verdict
 
-Copy this directory into a repository, edit the PROJECT-SPECIFIC TEST SURFACE,
-and keep the artifact machinery boring.
+Copy this file into a repository (its root or any subdirectory; the project
+root is inferred by walking up to .git / pyproject.toml / setup.cfg, or set
+with PROJECT_ROOT), edit the PROJECT-SPECIFIC TEST SURFACE, and keep the
+artifact machinery boring. `python run_test.py --help` lists the settings.
 
 No pytest, Ruff, lint, typecheck, CI, hash, benchmark, coverage, or other gate
 is implied. A project may deliberately invoke any of those *inside its one
-test* when they are part of that project's acceptance contract.
+test* when they are part of that project's acceptance contract. The shipped
+execute_test() (the project's pytest suite if it has one, else a byte-compile
+of its Python files) is only a runnable starting point for that one test, not
+a gate the harness imposes.
 
 The harness is independent of Accelerate, Somnus-C, any agent framework, and
 any repository continuity system.
@@ -83,10 +120,12 @@ to answer a narrower and more valuable question:
 from __future__ import annotations
 
 # --- Harness internals (do not remove) ---
+import argparse
 import json
 import logging
 import os
 import platform
+import subprocess
 import sys
 import time
 import traceback
@@ -96,11 +135,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-# --- Common in execute_test() — remove if unused in your project ---
-import hashlib
-import shutil
-import sqlite3
-import subprocess
+# --- Used by the shipped execute_test() — remove if unused in your project ---
 import tempfile
 
 
@@ -136,6 +171,7 @@ class TestOutcome:
 
     @property
     def passed(self) -> bool:
+        """True only when at least one check exists and every check passed."""
         return bool(self.checks) and all(check.passed for check in self.checks)
 
 
@@ -153,14 +189,49 @@ class TestContext:
 # PROJECT-SPECIFIC TEST SURFACE
 # Edit this section when installing the harness into a repository.
 #
-# Configuration (environment variables):
-#   PROJECT_ROOT           — override the inferred repository root
-#                            (default: two levels above this file)
-#   SINGLE_TEST_OUTPUT_DIR — override the artifact output directory
-#                            (default: <project_root>/test-runs/)
+# The shipped execute_test() is a generic, runnable starting point: it runs
+# the project's pytest suite when the project has one, otherwise it
+# byte-compiles every Python file under the project root. Replace it with the
+# one test that exercises the real boundary your project means to prove.
+#
+# Configuration (environment variables; see `python run_test.py --help`):
+#   PROJECT_ROOT           — override the inferred project root. Default: the
+#                            nearest directory, starting at this file's own
+#                            directory and walking up, that contains .git,
+#                            pyproject.toml or setup.cfg; else this file's
+#                            directory.
+#   SINGLE_TEST_OUTPUT_DIR — override the artifact output directory. Default:
+#                            <project_root>/test-runs/. A relative value is
+#                            resolved against the project root.
 # ============================================================================
 
-TEST_NAME = "GOLDEN PATH LAYER 1 DATA HIGHWAY RESTORATION"
+TEST_NAME = "PROJECT TEST SUITE"
+
+# Directories never byte-compiled by the fallback check (virtualenvs, VCS and
+# tool caches, vendored trees). Matched against paths relative to the root.
+_COMPILE_EXCLUDE = (
+    r"(^|[/\\])(\.git|\.hg|\.svn|\.venv|venv|\.tox|\.nox|node_modules|"
+    r"site-packages|__pypackages__|test-runs)([/\\]|$)"
+)
+
+
+def _pytest_signal(project_root: Path) -> str | None:
+    """Return why the project looks pytest-driven, or None if it does not."""
+    if (project_root / "tests").is_dir():
+        return "tests/ directory"
+    if (project_root / "pytest.ini").is_file():
+        return "pytest.ini"
+    if (project_root / "conftest.py").is_file():
+        return "conftest.py"
+    for name, marker in (
+        ("pyproject.toml", "[tool.pytest.ini_options]"),
+        ("setup.cfg", "[tool:pytest]"),
+        ("tox.ini", "[pytest]"),
+    ):
+        path = project_root / name
+        if path.is_file() and marker in path.read_text(encoding="utf-8", errors="replace"):
+            return f"{marker} in {name}"
+    return None
 
 
 def execute_test(ctx: TestContext) -> TestOutcome:
@@ -169,9 +240,6 @@ def execute_test(ctx: TestContext) -> TestOutcome:
 
     Replace this function in the target repository.
     Use _run_command() from harness internals for subprocess invocation.
-
-    # TODO: Replace the implementation below with your project's test.
-    # Everything after this docstring is specific to gp-cli / Golden Path.
 
     Requirements:
       1. Exercise the real boundary the project means to prove.
@@ -197,257 +265,61 @@ def execute_test(ctx: TestContext) -> TestOutcome:
             metrics={"elapsed_ms": result.elapsed_ms},
             evidence={"trace_length": len(result.trace)},
         )
+
+    Shipped default: if the project has a pytest suite (a tests/ directory or
+    pytest configuration), run `python -m pytest -q` in the project root and
+    require exit 0. Otherwise run `python -m compileall -q` over the project
+    (virtualenvs and tool directories excluded) with bytecode redirected to a
+    temporary directory, so the repository is not written to, and require
+    exit 0.
     """
-    metadata = json.loads(
-        _run_command(
-            ["cargo", "metadata", "--no-deps", "--format-version", "1", "--locked"],
-            cwd=ctx.project_root,
-            logger=ctx.logger,
-        ).stdout
+    reason = _pytest_signal(ctx.project_root)
+    with tempfile.TemporaryDirectory(prefix="single-test-pycache-") as pycache_prefix:
+        if reason is not None:
+            mode = "pytest"
+            command = [sys.executable, "-m", "pytest", "-q"]
+            check_name = "project-pytest-suite-passes"
+        else:
+            mode = "compileall"
+            reason = "no pytest suite detected"
+            command = [sys.executable, "-m", "compileall", "-q", "-x", _COMPILE_EXCLUDE, "."]
+            check_name = "project-python-files-compile"
+        env = dict(os.environ, PYTHONPYCACHEPREFIX=pycache_prefix)
+        started = time.perf_counter()
+        completed = _run_command(
+            command, cwd=ctx.project_root, logger=ctx.logger, expected=None, env=env
+        )
+        elapsed_s = time.perf_counter() - started
+
+    output_lines = completed.stdout.splitlines()
+    return TestOutcome(
+        summary=(
+            f"Ran `{' '.join(command[1:])}` in {ctx.project_root} "
+            f"({reason}); exit code {completed.returncode}."
+        ),
+        checks=[
+            Check(
+                name=check_name,
+                passed=completed.returncode == 0,
+                detail=f"{mode} selected because: {reason}",
+                expected=0,
+                observed=completed.returncode,
+            ),
+        ],
+        metrics={"command_elapsed_s": round(elapsed_s, 6), "output_lines": len(output_lines)},
+        evidence={
+            "mode": mode,
+            "selection_reason": reason,
+            "command": command,
+            "cwd": str(ctx.project_root),
+            "output_tail": output_lines[-40:],
+        },
+        notes=[
+            "This is the template's generic default test; replace execute_test() "
+            "with the project's real boundary test.",
+            "Full command output is in test.log.",
+        ],
     )
-    _run_command(
-        ["cargo", "build", "-p", "gp-cli", "--release", "--locked"],
-        cwd=ctx.project_root,
-        logger=ctx.logger,
-    )
-    gp = Path(metadata["target_directory"]) / "release" / "gp"
-    if not gp.is_file():
-        raise FileNotFoundError(f"built gp binary is missing at {gp}")
-
-    def digest(path: Path) -> str:
-        return hashlib.sha256(path.read_bytes()).hexdigest()
-
-    with tempfile.TemporaryDirectory(prefix="gp-layer1-") as temp:
-        workspace = Path(temp) / "workspace"
-        workspace.mkdir()
-        _run_command([str(gp), "-w", str(workspace), "demo"], cwd=ctx.project_root, logger=ctx.logger)
-
-        fabric = workspace / ".gp"
-        expected_paths = {
-            "major": fabric / "major.db",
-            "tooling": fabric / "minor" / "tooling.db",
-            "rejects": fabric / "minor" / "rejects.db",
-            "telemetry": fabric / "minor" / "telemetry.db",
-        }
-        physical_layout = all(path.is_file() for path in expected_paths.values())
-
-        major = sqlite3.connect(f"file:{expected_paths['major']}?mode=ro", uri=True)
-        try:
-            mounts = {
-                role: (path, schema_kind, status)
-                for role, path, schema_kind, status in major.execute(
-                    "SELECT role,path,schema_kind,status FROM mounts"
-                )
-            }
-            event_hashes = major.execute(
-                "SELECT prev_hash,event_hash FROM events ORDER BY seq"
-            ).fetchall()
-            state_hashes = major.execute(
-                "SELECT state_hash FROM committed_states ORDER BY session_id,state_seq"
-            ).fetchall()
-            event_lanes = dict(
-                major.execute("SELECT lane,COUNT(*) FROM events GROUP BY lane").fetchall()
-            )
-        finally:
-            major.close()
-
-        expected_mounts = {
-            role: (f"minor/{role}.db", "gp-minor/1", "active")
-            for role in ("tooling", "rejects", "telemetry")
-        }
-        mount_contract = mounts == expected_mounts
-        distinct_chains = bool(event_hashes and state_hashes) and (
-            event_hashes[-1][1] != state_hashes[-1][0]
-        )
-
-        before_verify = {name: digest(path) for name, path in expected_paths.items()}
-        verified = _run_command(
-            [str(gp), "-w", str(workspace), "--json", "verify"],
-            cwd=ctx.project_root,
-            logger=ctx.logger,
-        )
-        verify_report = json.loads(verified.stdout)
-        after_verify = {name: digest(path) for name, path in expected_paths.items()}
-        readonly_verify = before_verify == after_verify
-
-        damaged = Path(temp) / "missing-minor"
-        shutil.copytree(workspace, damaged)
-        missing_telemetry = damaged / ".gp" / "minor" / "telemetry.db"
-        missing_telemetry.unlink()
-        damaged_verify = _run_command(
-            [str(gp), "-w", str(damaged), "--json", "verify"],
-            cwd=ctx.project_root,
-            logger=ctx.logger,
-            expected=2,
-        )
-        damaged_report = json.loads(damaged_verify.stdout)
-        missing_reported = any(
-            issue.get("check") == "minor_database"
-            and issue.get("subject") == "telemetry"
-            for issue in damaged_report.get("issues", [])
-        )
-        verify_did_not_recreate = not missing_telemetry.exists()
-
-        reopen = subprocess.run(
-            [str(gp), "-w", str(damaged), "status"],
-            cwd=ctx.project_root,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            check=False,
-        )
-        ctx.logger.info("$ gp damaged status\nexit=%s\n%s", reopen.returncode, reopen.stdout)
-        reopen_failed_loud = (
-            reopen.returncode != 0
-            and "mounted minor ledger" in reopen.stdout
-            and not missing_telemetry.exists()
-        )
-
-        damaged_schema = Path(temp) / "missing-minor-schema"
-        shutil.copytree(workspace, damaged_schema)
-        damaged_tooling = damaged_schema / ".gp" / "minor" / "tooling.db"
-        tooling = sqlite3.connect(damaged_tooling)
-        try:
-            tooling.execute("DROP TABLE tool_calls")
-            tooling.commit()
-        finally:
-            tooling.close()
-        schema_verify = _run_command(
-            [str(gp), "-w", str(damaged_schema), "--json", "verify"],
-            cwd=ctx.project_root,
-            logger=ctx.logger,
-            expected=2,
-        )
-        schema_report = json.loads(schema_verify.stdout)
-        missing_schema_reported = any(
-            issue.get("check") == "minor_schema"
-            and issue.get("subject") == "tooling"
-            and "tool_calls" in issue.get("detail", "")
-            for issue in schema_report.get("issues", [])
-        )
-        schema_reopen = subprocess.run(
-            [str(gp), "-w", str(damaged_schema), "status"],
-            cwd=ctx.project_root,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            check=False,
-        )
-        ctx.logger.info(
-            "$ gp missing-schema status\nexit=%s\n%s",
-            schema_reopen.returncode,
-            schema_reopen.stdout,
-        )
-        tooling = sqlite3.connect(f"file:{damaged_tooling}?mode=ro", uri=True)
-        try:
-            schema_healed = bool(
-                tooling.execute(
-                    "SELECT EXISTS(SELECT 1 FROM sqlite_master "
-                    "WHERE type='table' AND name='tool_calls')"
-                ).fetchone()[0]
-            )
-        finally:
-            tooling.close()
-        schema_reopen_failed_loud = (
-            schema_reopen.returncode != 0
-            and "missing required table" in schema_reopen.stdout
-        )
-
-        checks = [
-            Check(
-                "physical-four-database-layout",
-                physical_layout,
-                expected=list(str(path) for path in expected_paths.values()),
-                observed={name: path.is_file() for name, path in expected_paths.items()},
-            ),
-            Check(
-                "built-in-minor-mount-contract",
-                mount_contract,
-                expected=expected_mounts,
-                observed=mounts,
-            ),
-            Check(
-                "separate-event-and-state-chains",
-                distinct_chains,
-                expected="non-empty distinct event and committed-state chain heads",
-                observed={
-                    "event_rows": len(event_hashes),
-                    "state_rows": len(state_hashes),
-                    "event_head": event_hashes[-1][1] if event_hashes else None,
-                    "state_head": state_hashes[-1][0] if state_hashes else None,
-                },
-            ),
-            Check(
-                "workspace-fsck-passes",
-                verify_report.get("issues") == [],
-                expected={"issues": []},
-                observed=verify_report,
-            ),
-            Check(
-                "workspace-fsck-is-read-only",
-                readonly_verify,
-                expected=before_verify,
-                observed=after_verify,
-            ),
-            Check(
-                "missing-minor-is-verifier-visible",
-                missing_reported,
-                expected="minor_database issue for telemetry",
-                observed=damaged_report.get("issues"),
-            ),
-            Check(
-                "missing-minor-is-not-recreated",
-                verify_did_not_recreate and reopen_failed_loud,
-                expected="verify preserves absence and normal reopen fails loud",
-                observed={
-                    "exists_after_verify": missing_telemetry.exists(),
-                    "reopen_exit": reopen.returncode,
-                    "reopen_output": reopen.stdout,
-                },
-            ),
-            Check(
-                "missing-minor-schema-is-not-healed",
-                missing_schema_reported
-                and schema_reopen_failed_loud
-                and not schema_healed,
-                expected=(
-                    "verify reports missing tooling table and normal reopen "
-                    "fails without recreating it"
-                ),
-                observed={
-                    "verify_issues": schema_report.get("issues"),
-                    "reopen_exit": schema_reopen.returncode,
-                    "reopen_output": schema_reopen.stdout,
-                    "tool_calls_exists_after_reopen": schema_healed,
-                },
-            ),
-        ]
-        return TestOutcome(
-            summary=(
-                "The real gp CLI exercised the Layer 1 Data Highway, its exact "
-                "major/minor layout, both hash chains, read-only whole-workspace "
-                "fsck, and fail-loud evidence-loss boundary."
-            ),
-            checks=checks,
-            metrics={
-                "events": len(event_hashes),
-                "committed_states": len(state_hashes),
-                "event_lanes": event_lanes,
-            },
-            evidence={
-                "gp_binary": str(gp),
-                "verify_report": verify_report,
-                "damaged_verify_report": damaged_report,
-                "damaged_schema_verify_report": schema_report,
-                "database_sha256_before_verify": before_verify,
-                "database_sha256_after_verify": after_verify,
-            },
-            notes=[
-                "The test uses disposable /tmp workspaces and does not exercise the out-of-scope python/ projection.",
-                "The damaged copy is intentionally missing telemetry.db to prove evidence loss cannot be healed silently.",
-                "A second damaged copy is intentionally missing tooling.tool_calls to prove schema loss cannot be healed silently.",
-            ],
-        )
 
 
 # ============================================================================
@@ -462,7 +334,8 @@ def _run_command(
     *,
     cwd: Path,
     logger: logging.Logger,
-    expected: int = 0,
+    expected: int | None = 0,
+    env: Mapping[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """
     Run a subprocess, log the invocation and output, and raise on unexpected exit.
@@ -475,19 +348,23 @@ def _run_command(
         command:  Argv list passed to subprocess.run.
         cwd:      Working directory for the process (typically ctx.project_root).
         logger:   Logger to record the command and its output.
-        expected: Expected exit code; raises RuntimeError on mismatch.
+        expected: Expected exit code; raises RuntimeError on mismatch. Pass
+                  None to return the result whatever the exit code (the
+                  caller then records it as a Check).
+        env:      Environment for the process (default: inherit).
     """
     logger.info("$ %s", " ".join(command))
     completed = subprocess.run(
         command,
         cwd=cwd,
+        env=None if env is None else dict(env),
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         check=False,
     )
     logger.info("exit=%s\n%s", completed.returncode, completed.stdout)
-    if completed.returncode != expected:
+    if expected is not None and completed.returncode != expected:
         raise RuntimeError(
             f"command exited {completed.returncode}, expected {expected}: "
             f"{' '.join(command)}\n{completed.stdout}"
@@ -524,13 +401,11 @@ def _setup_logger(log_file: Path) -> logging.Logger:
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 
-    # Safe for repeated invocation in the same interpreter.
+    # Safe for repeated invocation in the same interpreter. A handler from an
+    # earlier run that cannot be closed is a real fault and is not swallowed.
     for handler in list(logger.handlers):
         logger.removeHandler(handler)
-        try:
-            handler.close()
-        except Exception:
-            pass
+        handler.close()
 
     file_handler = logging.FileHandler(log_file, mode="w", encoding="utf-8")
     file_handler.setLevel(logging.DEBUG)
@@ -554,10 +429,33 @@ def _setup_logger(log_file: Path) -> logging.Logger:
     return logger
 
 
-def _default_output_root(project_root: Path) -> Path:
-    override = os.environ.get("SINGLE_TEST_OUTPUT_DIR")
+_ROOT_MARKERS = (".git", "pyproject.toml", "setup.cfg")
+
+
+def _infer_project_root(runner: Path) -> Path:
+    """
+    Resolve the project root for this run.
+
+    $PROJECT_ROOT wins. Otherwise walk up from the directory holding this file
+    to the first directory containing .git, pyproject.toml or setup.cfg, so the
+    harness works both at the repository root and in a subdirectory of it;
+    with no marker anywhere, use this file's own directory.
+    """
+    override = os.environ.get("PROJECT_ROOT")
     if override:
         return Path(override).expanduser().resolve()
+    start = runner.resolve().parent
+    for candidate in (start, *start.parents):
+        if any((candidate / marker).exists() for marker in _ROOT_MARKERS):
+            return candidate
+    return start
+
+
+def _default_output_root(project_root: Path) -> Path:
+    """Artifact root: $SINGLE_TEST_OUTPUT_DIR (relative = under the project root) or <root>/test-runs."""
+    override = os.environ.get("SINGLE_TEST_OUTPUT_DIR")
+    if override:
+        return (project_root / Path(override).expanduser()).resolve()
     return project_root / "test-runs"
 
 
@@ -712,10 +610,34 @@ def _render_report(manifest: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def main() -> int:
-    project_root = Path(
-        os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent.parent)
-    ).expanduser().resolve()
+_USAGE_EPILOG = """\
+Runs the single project test defined in execute_test() and writes
+manifest.json, report.md and test.log into a fresh per-run directory.
+Exit status: 0 when the verdict is PASS, 1 when it is FAIL.
+
+environment variables:
+  PROJECT_ROOT            project root; default: nearest directory at or above
+                          this file containing .git, pyproject.toml or
+                          setup.cfg, else this file's directory
+  SINGLE_TEST_OUTPUT_DIR  artifact root; default: <project_root>/test-runs;
+                          relative values resolve against the project root
+"""
+
+
+def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog=Path(__file__).name,
+        description=f"Agnostic single-test harness: {TEST_NAME}",
+        epilog=_USAGE_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run the project test once, write the three artifacts, return 0 on PASS else 1."""
+    _parse_args(argv)
+    project_root = _infer_project_root(Path(__file__))
 
     started_at = _utc_now()
     run_id = (

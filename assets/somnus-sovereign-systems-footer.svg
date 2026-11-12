@@ -1,3 +1,35 @@
+<!-- somnus:metadata:v2
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-73fc-7067-8e1b-8f3e5283f8b7"
+  revision: 1
+  title: "Somnus Sovereign Systems Footer"
+  classification:
+    category: "engineering"
+    type: "asset"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-73fc-7067-8e1b-8f3e5283f8b7"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "somnus-sovereign-systems-footer"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-73fc-7067-8e1b-8f3e5283f8b7"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "mixed"
+somnus:end -->
 <svg width="400" height="48" viewBox="0 0 400 48" xmlns="http://www.w3.org/2000/svg">
   <rect width="400" height="48" fill="#0d1117" rx="6"/>
   <line x1="60" y1="24" x2="170" y2="24" stroke="#21262d" stroke-width="1"/>

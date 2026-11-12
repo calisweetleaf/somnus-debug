@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-731e-7312-b434-ed7dfc19d32c"
+#   revision: 1
+#   title: "Python Production Doctor diagnoses Python project readiness without modifying source code"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-731e-7312-b434-ed7dfc19d32c"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "python-production-doctor-diagnoses-python-project-readiness-without-modifying-so"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-731e-7312-b434-ed7dfc19d32c"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """Python Production Doctor diagnoses Python project readiness without modifying source code.
 
 Modified: 2026-06-08

@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-7234-738e-901d-4ce38993efda"
+#   revision: 1
+#   title: "Generate a class-by-class, definition-by-definition index for a Python file"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-7234-738e-901d-4ce38993efda"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "generate-a-class-by-class-definition-by-definition-index-for-a-python-file"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-7234-738e-901d-4ce38993efda"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """Generate a class-by-class, definition-by-definition index for a Python file.
 
 The analyzer is deliberately AST-only: it parses source without importing or
@@ -175,7 +207,7 @@ def build_index(
     include_module_functions: bool = True,
 ) -> str:
     """Build a deterministic Markdown/plain-text index from Python source."""
-    tree = ast.parse(source, filename=source_name, type_comments=True)
+    tree = ast.parse(source, filename=source_name)
     classes = [node for node in tree.body if isinstance(node, ast.ClassDef)]
     all_classes = sorted(
         (node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)),

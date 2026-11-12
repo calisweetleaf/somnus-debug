@@ -1,0 +1,11 @@
+import sys
+from somnus_debug import cli
+saved = list(sys.argv)
+print("pycache-clean (dry) ->", cli.main(["pycache-clean", "--config", "config.yaml"]))
+print("sys.argv restored:", sys.argv == saved)
+print("pycache-clean missing cfg ->", cli.main(["pycache-clean", "--config", "nope.yaml"]))
+print("structure ->", cli.main(["structure", "ex6_cli.py", "-o", "idx.md"]))
+print("init-test-harness ->", cli.main(["init-test-harness", "harness"]))
+print("init-test-harness again ->", cli.main(["init-test-harness", "harness"]))
+print("doctor --help ->", cli.main(["doctor", "--help"]) if False else "skipped")
+print("unknown ->", cli.main(["nope"]))

@@ -1,0 +1,57 @@
+# somnus-debug profile
+
+Generated 2026-11-12 by somnus-debug-fieldkit `onboard.py` with somnus-debug `0.1.0`.
+Agents read this card before using somnus-debug here. Project tests, CI, and `AGENTS.md` remain the acceptance authority.
+
+## Runner
+
+project environment .venv. Every command below runs from `.somnus-debug/` so `production_doctor.log` stays out of the repo root.
+
+- src/ layout detected: scans run with PYTHONPATH=src so the project's own packages resolve.
+
+## Layout
+
+| Path | Purpose | Tracked |
+|---|---|---|
+| `.somnus-debug/python_doctor.yaml` | Doctor config: coverage, thresholds, gate | yes |
+| `.somnus-debug/dispositions.json` | Reviewed findings that are accepted or false positives, with reasons | yes |
+| `.somnus-debug/pycache.yaml` | Cache-cleaner config, dry-run locked | yes |
+| `.somnus-debug/PROFILE.md` | This card | yes |
+| `.somnus-debug/state/` | Doctor SQLite history and per-run reports | no |
+| `.somnus-debug/runs/` | Named baseline and latest reports | no |
+
+## Coverage at onboarding
+
+| Directory | .py files |
+|---|---|
+| `src/` | 2 |
+| `tests/` | 1 |
+
+- Root-level Python files: none
+- Ignored as non-project noise: none detected
+- Test directories: `tests`
+- Native gate files: `pyproject.toml`
+- Single-test harness: absent
+- Verification scan: files=3, issues=1, critical=0, serious=0, exit=0 (gate passed)
+
+## Loop commands
+
+```console
+cd .somnus-debug
+PYTHONPATH=../src /tmp/lane-f/proj/.venv/bin/python -m somnus_debug.cli doctor scan .. -c python_doctor.yaml -o runs/baseline.md --json-output runs/baseline.json   # before edits
+PYTHONPATH=../src /tmp/lane-f/proj/.venv/bin/python -m somnus_debug.cli doctor scan .. -c python_doctor.yaml -o runs/latest.md --json-output runs/latest.json       # after each repair batch
+python3 /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/skills/somnus-debug-fieldkit/scripts/delta.py runs/baseline.json runs/latest.json --dispositions dispositions.json          # new / resolved / regressions
+PYTHONPATH=../src /tmp/lane-f/proj/.venv/bin/python -m somnus_debug.cli doctor history .. -c python_doctor.yaml --limit 10
+PYTHONPATH=../src /tmp/lane-f/proj/.venv/bin/python -m somnus_debug.cli structure ../path/to/file.py
+PYTHONPATH=../src /tmp/lane-f/proj/.venv/bin/python -m somnus_debug.cli pycache-clean --config pycache.yaml --dry-run --verbose
+```
+
+`delta.py` exit codes: 0 clean, 1 new serious/critical finding, 2 coverage regression, 3 input error.
+Doctor exit codes: 0 gate passed, 1 serious, 2 critical, 4 config/doctor error, 5 runtime failure. A zero-file scan exits 0.
+Finding meanings, real fixes, and known false positives: `/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/skills/somnus-debug-fieldkit/references/findings.md`.
+
+## Maintenance
+
+- Tree changed shape (new package, vendored drop): edit `ignore_patterns`, then `python3 /workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug/skills/somnus-debug-fieldkit/scripts/onboard.py ..` (plan mode).
+- Repo moved or cloned: regenerate `pycache.yaml` (absolute roots) and this card.
+- Re-onboarding never overwrites; delete or edit files deliberately.

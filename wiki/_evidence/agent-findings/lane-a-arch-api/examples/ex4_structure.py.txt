@@ -1,0 +1,41 @@
+from pathlib import Path
+from somnus_debug.structure import build_index
+from somnus_debug.structure.core import _iter_classes
+import ast
+REPO = Path("/workspace/projects/69c23182-5d69-4d5c-ae10-5cdad587b9d3/forge/somnus-debug")
+src = '''"""Mod."""
+class Outer:
+    """Outer doc paragraph.
+
+    Second paragraph."""
+    @staticmethod
+    def m(a: dict[str, int]) -> None:
+        """Method doc."""
+    class Inner:
+        def n(self): ...
+def factory():
+    class Local:
+        class LocalInner:
+            def deep(self): ...
+        def x(self): ...
+    def nested_fn(): ...
+    return Local
+async def go(*a, **k) -> int:
+    return 1
+'''
+out = build_index(src, source_name="demo.py")
+print(out)
+fails = []
+for p in sorted(list(REPO.glob("src/**/*.py")) + list(REPO.glob("*.py"))):
+    try:
+        build_index(p.read_text(encoding="utf-8"), source_name=str(p))
+    except SyntaxError as e:
+        fails.append((str(p.relative_to(REPO)), e.lineno, e.msg))
+print("build_index failures over repo .py files:", fails)
+tc = "x = 1  # type: int\ndef f():\n    # type: () -> None\n    pass\n"
+for t in ["# type: ignore\nx = 1\n", "def f(a):\n    # type: (int) -> int\n    return a\n", "x = [  # type: List[int]\n 1]\n", "def g():\n    pass\n    # type: bogus\n"]:
+    try: build_index(t, source_name="t.py"); r="ok"
+    except SyntaxError as e: r=f"SyntaxError: {e.msg} line {e.lineno}"
+    try: ast.parse(t); r2="ok"
+    except SyntaxError as e: r2="SyntaxError"
+    print(repr(t[:30]), "build_index:", r, "| plain ast.parse:", r2)

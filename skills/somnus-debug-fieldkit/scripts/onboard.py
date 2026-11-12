@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-7700-747d-8ec0-cb626c1a2281"
+#   revision: 1
+#   title: "Onboard a codebase onto somnus-debug with a verified, project-local profile"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-7700-747d-8ec0-cb626c1a2281"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "onboard-a-codebase-onto-somnus-debug-with-a-verified-project-local-profile"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-7700-747d-8ec0-cb626c1a2281"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """Onboard a codebase onto somnus-debug with a verified, project-local profile.
 
 Plan mode (default) surveys the repository, picks the interpreter that should
@@ -7,15 +39,21 @@ a stateless scan from a throwaway directory. It writes nothing in the repo.
 
 ``--apply`` writes ``.somnus-debug/`` (doctor config, pycache config,
 dispositions, profile card, local .gitignore) and never overwrites a file.
-``--baseline`` records a stateful baseline scan under ``.somnus-debug/runs/``.
+The profile card is written only after the verification scan passes, so a
+repo whose coverage is wrong is never recorded as onboarded.
+``--baseline`` records a stateful baseline scan under ``.somnus-debug/runs/``
+and refuses to replace an existing one unless ``--force-baseline`` is given.
 
 Why the runner matters: doctor resolves third-party imports with
 ``importlib.util.find_spec`` in the interpreter that runs it. A CLI installed
 outside the project's environment flags every project dependency as a
-``missing_imports`` finding, and a ``src/`` layout needs ``PYTHONPATH=src`` (or
-an editable install) for its own packages to resolve.
+``missing_imports`` finding. A ``src/`` layout needs nothing extra: doctor
+resolves absolute imports of the project's own packages under ``<root>/src``
+itself, so onboard no longer exports ``PYTHONPATH=src`` (which made those
+imports resolve as third-party and hid dependency cycles).
 
-Exit codes: 0 ok, 1 usage error, 2 coverage failure, 3 somnus-debug unavailable.
+Exit codes: 0 ok, 1 usage error or baseline refused, 2 coverage failure,
+3 somnus-debug unavailable.
 Standard library only.
 """
 
@@ -60,6 +98,10 @@ EXIT_MEANING = {
 }
 
 
+class DoctorError(RuntimeError):
+    """Doctor could not run with the chosen config; onboard reports it on one line and exits 2."""
+
+
 @dataclass
 class Runner:
     """How to invoke somnus-debug for this repository."""
@@ -67,24 +109,11 @@ class Runner:
     argv: list[str]
     kind: str
     note: str
-    pythonpath: list[Path] = field(default_factory=list)
 
-    def env(self) -> dict[str, str]:
-        """Return the process environment with PYTHONPATH extended for src layouts."""
-        environment = os.environ.copy()
-        if self.pythonpath:
-            extra = os.pathsep.join(str(p) for p in self.pythonpath)
-            environment["PYTHONPATH"] = extra + (os.pathsep + environment["PYTHONPATH"] if environment.get("PYTHONPATH") else "")
-        return environment
-
-    def shell_prefix(self, cwd: Path) -> str:
-        """Render the runner as a shell prefix relative to ``cwd``."""
-        parts: list[str] = []
-        if self.pythonpath:
-            parts.append("PYTHONPATH=" + os.pathsep.join(os.path.relpath(p, cwd) for p in self.pythonpath))
+    def shell_prefix(self) -> str:
+        """Render the runner as a shell command prefix."""
         # Interpreter paths stay absolute: CPython 3.14 warns when a venv python is invoked via "../.venv".
-        parts.extend(self.argv)
-        return " ".join(parts)
+        return " ".join(self.argv)
 
 
 @dataclass
@@ -120,15 +149,22 @@ def run(cmd: list[str], cwd: Path, timeout: int = 600, env: dict[str, str] | Non
 
 
 def git_ignored_dirs(root: Path) -> list[str]:
-    """Return git-ignored directories (relative, POSIX) that contain Python files."""
-    proc = run(["git", "-C", str(root), "status", "--ignored", "--porcelain=v1"], root, timeout=60)
+    """Return git-ignored directories (relative, POSIX) that contain Python files.
+
+    Read-only: ``git status`` refreshes and rewrites ``.git/index``; ``ls-files`` with optional
+    locks disabled never writes to the repository.
+    """
+    env = os.environ.copy()
+    env["GIT_OPTIONAL_LOCKS"] = "0"
+    cmd = ["git", "--no-optional-locks", "-C", str(root), "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"]
+    proc = run(cmd, root, timeout=60, env=env)
     if proc.returncode != 0:
         return []
     found: list[str] = []
-    for line in proc.stdout.splitlines():
-        if not line.startswith("!! ") or not line.endswith("/"):
+    for entry in proc.stdout.split("\0"):
+        if not entry.endswith("/"):
             continue
-        rel = line[3:].rstrip("/").strip('"')
+        rel = entry.rstrip("/")
         if Path(rel).name in ALWAYS_PRUNE:
             continue
         if any(name.endswith(".py") for _, _, files in os.walk(root / rel) for name in files):
@@ -139,7 +175,7 @@ def git_ignored_dirs(root: Path) -> list[str]:
 def survey(root: Path) -> Survey:
     """Walk the repository once and collect onboarding facts."""
     facts = Survey(root=root)
-    facts.has_profile = (root / PROFILE_DIR).is_dir()
+    facts.has_profile = (root / PROFILE_DIR / "PROFILE.md").is_file()
     facts.has_root_state = (root / ".python_doctor").is_dir()
     facts.is_git = (root / ".git").exists()
     facts.has_harness = [name for name in ("run_test.py", "CONTRACT.md") if (root / name).exists()]
@@ -195,35 +231,42 @@ def venv_python(venv: Path) -> Path | None:
 def has_somnus_debug(python: Path) -> bool:
     """Return true when ``python`` can import somnus_debug."""
     with tempfile.TemporaryDirectory() as tmp:
-        return run([str(python), "-c", "import somnus_debug"], Path(tmp), timeout=60).returncode == 0
+        try:
+            return run([str(python), "-c", "import somnus_debug"], Path(tmp), timeout=60).returncode == 0
+        except OSError:
+            return False
 
 
 def choose_runner(facts: Survey, explicit_python: str | None) -> tuple[Runner | None, list[str]]:
     """Pick the interpreter that should run doctor and explain the choice."""
     notes: list[str] = []
-    pythonpath = [facts.root / "src"] if facts.src_layout else []
     if facts.src_layout:
-        notes.append("src/ layout detected: scans run with PYTHONPATH=src so the project's own packages resolve.")
+        notes.append("src/ layout detected: doctor resolves the project's own packages under src/ itself; no PYTHONPATH is exported.")
     if explicit_python:
-        python = Path(explicit_python).expanduser().resolve()
+        # abspath, not resolve(): a venv's bin/python is a symlink to the base interpreter, and
+        # following it drops the venv's site-packages (and somnus-debug with them).
+        python = Path(os.path.abspath(Path(explicit_python).expanduser()))
+        if not python.is_file():
+            notes.append(f"--python {explicit_python}: no such interpreter ({python}).")
+            return None, notes
         if not has_somnus_debug(python):
             notes.append(f"{python} cannot import somnus_debug. Install it there: {python} -m pip install somnus-debug")
             return None, notes
-        return Runner([str(python), "-m", "somnus_debug.cli"], "explicit", f"{python} (--python)", pythonpath), notes
+        return Runner([str(python), "-m", "somnus_debug.cli"], "explicit", f"{python} (--python)"), notes
     venv_candidates = [facts.root / name for name in VENV_NAMES] + [facts.root / rel for rel in facts.venvs]
     for venv in dict.fromkeys(venv_candidates):
         python = venv_python(venv)
         if python is None:
             continue
         if has_somnus_debug(python):
-            return Runner([str(python), "-m", "somnus_debug.cli"], "project-env", f"project environment {venv.relative_to(facts.root)}", pythonpath), notes
+            return Runner([str(python), "-m", "somnus_debug.cli"], "project-env", f"project environment {venv.relative_to(facts.root)}"), notes
         notes.append(
             f"Project environment {venv.relative_to(facts.root)} lacks somnus-debug. Third-party imports will only "
             f"resolve if it runs there: {python.relative_to(facts.root)} -m pip install somnus-debug (ask before installing)."
         )
     if shutil.which("somnus-debug"):
         notes.append("Using somnus-debug from PATH. Its interpreter, not the project's, resolves third-party imports; expect missing_imports for project dependencies it cannot see.")
-        return Runner(["somnus-debug"], "path", "somnus-debug on PATH", pythonpath), notes
+        return Runner(["somnus-debug"], "path", "somnus-debug on PATH"), notes
     notes.append("somnus-debug is not installed. Install with `pip install somnus-debug` (into the project environment when one exists), following the operator's install policy.")
     return None, notes
 
@@ -231,7 +274,7 @@ def choose_runner(facts: Survey, explicit_python: str | None) -> tuple[Runner | 
 def cli_version(runner: Runner) -> str:
     """Return the version string reported by the runner."""
     with tempfile.TemporaryDirectory() as tmp:
-        proc = run([*runner.argv, "--version"], Path(tmp), timeout=60, env=runner.env())
+        proc = run([*runner.argv, "--version"], Path(tmp), timeout=60)
     return (proc.stdout.strip() or proc.stderr.strip() or "unknown").splitlines()[0]
 
 
@@ -245,9 +288,9 @@ def doctor_config_text(facts: Survey, runner: Runner) -> str:
     """Generate doctor YAML from the CLI's own default, then retarget coverage and state."""
     with tempfile.TemporaryDirectory() as tmp:
         target = Path(tmp) / "default.yaml"
-        proc = run([*runner.argv, "doctor", "init-config", "-o", str(target)], Path(tmp), timeout=60, env=runner.env())
+        proc = run([*runner.argv, "doctor", "init-config", "-o", str(target)], Path(tmp), timeout=60)
         if proc.returncode != 0:
-            raise RuntimeError(f"doctor init-config failed ({proc.returncode}): {proc.stderr.strip()}")
+            raise DoctorError(f"doctor init-config failed (exit {proc.returncode}): {first_error_line(proc.stderr)}")
         text = target.read_text(encoding="utf-8")
     include_block = 'include_patterns:\n  - "*.py"\n'
     ignore_block = "ignore_patterns:\n" + "".join(f'  - "{p}"\n' for p in ignore_patterns(facts))
@@ -255,7 +298,7 @@ def doctor_config_text(facts: Survey, runner: Runner) -> str:
     text, n_ign = re.subn(r"ignore_patterns:\n(?:  - .*\n)+", ignore_block, text)
     text, n_state = re.subn(r"^state_dir: .*$", f'state_dir: "{PROFILE_DIR}/state"', text, flags=re.M)
     if (n_inc, n_ign, n_state) != (1, 1, 1):
-        raise RuntimeError("Default doctor config layout changed; update onboard.py before generating a profile.")
+        raise DoctorError("default doctor config layout changed; update onboard.py before generating a profile")
     header = (
         f"# Generated by somnus-debug-fieldkit onboard.py on {dt.date.today().isoformat()}.\n"
         "# Coverage = include \"*.py\" minus ignore_patterns (fnmatch; '*' crosses '/';\n"
@@ -293,7 +336,7 @@ def pycache_config_text(facts: Survey) -> str:
 def profile_text(facts: Survey, runner: Runner, version: str, config_rel: str, scan: dict[str, str] | None, notes: list[str]) -> str:
     """Render PROFILE.md: the per-repo operating card future agents read first."""
     profile_dir = facts.root / PROFILE_DIR
-    sd = runner.shell_prefix(profile_dir)
+    sd = runner.shell_prefix()
     cfg = Path(config_rel).name if config_rel.startswith(PROFILE_DIR + "/") else f"../{config_rel}"
     delta = f"python3 {FIELDKIT / 'scripts' / 'delta.py'}"
     top = "\n".join(f"| `{name}/` | {count} |" for name, count in facts.py_by_top.most_common()) or "| (none) | 0 |"
@@ -332,6 +375,7 @@ Agents read this card before using somnus-debug here. Project tests, CI, and `AG
 {top}
 
 - Root-level Python files: {root_files}
+- src layout: {"yes; doctor resolves the project's own packages under src/ natively (no PYTHONPATH)" if facts.src_layout else "no"}
 - Ignored as non-project noise: {", ".join(f"`{n}`" for n in noise) or "none detected"}
 - Test directories: {", ".join(f"`{t}`" for t in facts.test_dirs) or "none detected"}
 - Native gate files: {", ".join(f"`{g}`" for g in facts.native_gates) or "none detected; read AGENTS.md"}
@@ -362,15 +406,24 @@ Finding meanings, real fixes, and known false positives: `{FIELDKIT / 'reference
 """
 
 
+def first_error_line(stderr: str) -> str:
+    """Return doctor's own one-line failure message from stderr, or the last non-empty line."""
+    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    for line in lines:
+        if line.startswith("Doctor failure:"):
+            return line
+    return lines[-1] if lines else "no output on stderr"
+
+
 def run_scan(runner: Runner, root: Path, config: Path, stateful: bool, out_md: Path, cwd: Path) -> dict[str, str]:
     """Run a doctor scan with ``cwd`` as the log location and summarize the result."""
     cmd = [*runner.argv, "doctor", "scan", str(root), "-c", str(config), "-o", str(out_md), "--json-output", str(out_md.with_suffix(".json"))]
     if not stateful:
         cmd.append("--no-state")
-    proc = run(cmd, cwd, env=runner.env())
+    proc = run(cmd, cwd)
     match = SCAN_LINE.search(proc.stdout)
     if match is None:
-        raise RuntimeError(f"doctor scan produced no summary (exit {proc.returncode}):\n{proc.stdout}\n{proc.stderr}")
+        raise DoctorError(f"doctor scan with {config} failed (exit {proc.returncode}): {first_error_line(proc.stderr)}")
     files, issues, critical, serious = match.groups()
     run_id = re.search(r"Run ID: (\S+)", proc.stdout)
     return {
@@ -418,14 +471,38 @@ def report_scan(scan: dict[str, str], total_py: int) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     """Entry point; see the module docstring for modes and exit codes."""
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser = argparse.ArgumentParser(
+        description=__doc__.splitlines()[0],
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "exit codes:\n"
+            "  0  ok\n"
+            "  1  usage error, bad repo path, or --baseline refused (baseline exists, no --force-baseline)\n"
+            "  2  coverage failure: zero files scanned, or doctor/config error\n"
+            "  3  no usable somnus-debug (missing interpreter, or it cannot import somnus_debug)\n"
+            "\n"
+            "baseline: recorded when the verification scan covers files and doctor runs, even if\n"
+            "doctor exits 1 or 2 (findings are what a baseline records). An existing\n"
+            "runs/baseline.{md,json} is never replaced unless --force-baseline is given."
+        ),
+    )
     parser.add_argument("repo", nargs="?", default=".", help="repository root (default: cwd)")
     parser.add_argument("--apply", action="store_true", help="write .somnus-debug/ files that do not exist yet")
-    parser.add_argument("--baseline", action="store_true", help="record a stateful baseline scan into .somnus-debug/runs/")
+    parser.add_argument("--baseline", action="store_true", help="record a stateful baseline scan into .somnus-debug/runs/ (refuses to replace an existing one)")
+    parser.add_argument("--force-baseline", action="store_true", help="with --baseline, replace an existing runs/baseline.{md,json}")
     parser.add_argument("--new-config", action="store_true", help="generate .somnus-debug/python_doctor.yaml even if a root config exists")
     parser.add_argument("--python", help="interpreter that has somnus-debug installed (default: project venv, then PATH)")
     args = parser.parse_args(argv)
+    try:
+        return onboard(args)
+    except DoctorError as error:
+        # Documented contract: a doctor/config error is a coverage failure (exit 2), one line, no traceback.
+        print(f"error: {error}", file=sys.stderr)
+        return 2
 
+
+def onboard(args: argparse.Namespace) -> int:
+    """Survey, choose a runner, verify coverage, and write the profile per ``args``."""
     root = Path(args.repo).expanduser().resolve()
     if not root.is_dir():
         print(f"error: {root} is not a directory", file=sys.stderr)
@@ -457,6 +534,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.baseline and not args.apply and not config_path.exists():
         print("error: no doctor config yet; use --apply first", file=sys.stderr)
         return 1
+    existing_baseline = [p for p in (profile_dir / "runs" / "baseline.md", profile_dir / "runs" / "baseline.json") if p.exists()]
+    if args.baseline and existing_baseline and not args.force_baseline:
+        print(f"error: {existing_baseline[0]} exists; a baseline is never replaced silently. Pass --force-baseline to re-record it.", file=sys.stderr)
+        return 1
 
     written: list[str] = []
     skipped: list[str] = []
@@ -481,9 +562,16 @@ def main(argv: list[str] | None = None) -> int:
         return status
 
     if args.apply:
-        write_new(profile_dir / "PROFILE.md", profile_text(facts, runner, version, config_rel, scan, notes), written, skipped)
+        if scan is not None and status == 0:
+            write_new(profile_dir / "PROFILE.md", profile_text(facts, runner, version, config_rel, scan, notes), written, skipped)
+        else:
+            # Without a verified scan the card would mark the repo as onboarded; leave it absent so a rerun retries.
+            print("\nPROFILE.md not written: the verification scan failed. Fix coverage, then rerun with --apply.")
+            status = status or 2
 
-    if args.baseline and status == 0:
+    if args.baseline and status != 0:
+        print("\nBaseline skipped: the verification scan failed.")
+    elif args.baseline:
         (profile_dir / "runs").mkdir(parents=True, exist_ok=True)
         base = run_scan(runner, root, config_path, stateful=True, out_md=profile_dir / "runs" / "baseline.md", cwd=profile_dir)
         print(f"\nBaseline: files={base['files']} issues={base['issues']} serious={base['serious']} critical={base['critical']} exit={base['exit']} run_id={base['run_id']}")

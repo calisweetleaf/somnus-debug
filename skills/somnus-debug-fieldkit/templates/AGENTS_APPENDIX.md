@@ -1,3 +1,35 @@
+---
+somnus:
+  schema: "somnus://metadata/core/2.0.0"
+  id: "urn:somnus:artifact:01a19ace-7752-737a-a2db-45ae5ef93913"
+  revision: 1
+  title: "somnus-debug"
+  classification:
+    category: "engineering"
+    type: "report"
+    role: "informative"
+    scope: "component"
+    tags: []
+  lifecycle:
+    status: "draft"
+  authority:
+    standing: "candidate"
+    scopes:
+      - target_ref: "urn:somnus:artifact:01a19ace-7752-737a-a2db-45ae5ef93913"
+        aspects: ["content"]
+  time: {}
+  names:
+    slug: "somnus-debug"
+  knowledge:
+    coverage: "artifact"
+    subjects: ["urn:somnus:artifact:01a19ace-7752-737a-a2db-45ae5ef93913"]
+  access:
+    visibility: "internal"
+    allowed_uses: ["archive", "search", "reason"]
+  ingestion:
+    disposition: "candidate"
+    body_role: "narrative"
+---
 ## somnus-debug
 
 This repository uses the global `somnus-debug-fieldkit` skill for Python diagnostics. It is a supplemental evidence route. This file's other instructions, the project tests, CI, and acceptance criteria stay authoritative.

@@ -1,3 +1,35 @@
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-72cc-7384-ae27-ade59afbed93"
+#   revision: 1
+#   title: "Python Doctor"
+#   classification:
+#     category: "engineering"
+#     type: "configuration"
+#     role: "normative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-72cc-7384-ae27-ade59afbed93"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "python-doctor"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-72cc-7384-ae27-ade59afbed93"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "configuration"
+# somnus:end
 schema_version: "3.0"
 min_function_lines: 5
 min_class_lines: 6

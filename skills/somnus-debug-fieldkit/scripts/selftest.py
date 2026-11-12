@@ -1,4 +1,36 @@
 #!/usr/bin/env python3
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-7737-7032-be74-945a3b76faa0"
+#   revision: 1
+#   title: "Contract test: prove the installed somnus-debug still behaves the way this skill says"
+#   classification:
+#     category: "engineering"
+#     type: "source-code"
+#     role: "informative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-7737-7032-be74-945a3b76faa0"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "contract-test-prove-the-installed-somnus-debug-still-behaves-the-way-this-skill"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-7737-7032-be74-945a3b76faa0"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "source"
+# somnus:end
 """Contract test: prove the installed somnus-debug still behaves the way this skill says.
 
 Every claim the fieldkit makes about flags, defaults, exit codes, file side
@@ -84,6 +116,8 @@ class Harness:
     def scan(self, root: Path, config: Path | None = None, env: dict[str, str] | None = None) -> tuple[int, dict, str]:
         """Stateless scan with explicit outputs; return exit code, JSON report, stdout+stderr."""
         out = self.work / "reports" / f"{root.name}.md"
+        # updated for T-36: never read a previous scan's report when this scan writes none.
+        out.with_suffix(".json").unlink(missing_ok=True)
         args = ["doctor", "scan", str(root), "--no-state", "-o", str(out), "--json-output", str(out.with_suffix(".json"))]
         if config:
             args += ["-c", str(config)]
@@ -163,51 +197,91 @@ def check_finding_triggers(h: Harness) -> None:
         "src/pkg/core.py": '"""Core module docstring long enough."""\n\n\ndef add(a: int, b: int) -> int:\n    """Add two integers together."""\n    total = a + b\n    if total < 0:\n        total = 0\n    checked = int(total)\n    return checked\n',
         "tests/test_core.py": '"""Tests for the core module here."""\nfrom pkg.core import add\n\n\ndef test_add() -> None:\n    """Check that add sums values."""\n    result = add(1, 2)\n    expected = 3\n    assert result == expected\n    assert isinstance(result, int)\n',
     })
+    # updated for T-36 (D-22, lane P1 T-04): doctor resolves <root>/src packages itself; no PYTHONPATH needed.
     _, plain, _ = h.scan(src)
-    env = os.environ.copy()
-    env["PYTHONPATH"] = str(src / "src")
-    _, fixed, _ = h.scan(src, env=env)
-    h.record("src layout: own imports flagged missing without PYTHONPATH, resolved with it", "references/findings.md#missing_imports",
-             "missing_imports" in categories(plain) and "missing_imports" not in categories(fixed), f"plain={'missing_imports' in categories(plain)} with_pythonpath={'missing_imports' in categories(fixed)}")
+    scanned = plain.get("summary", {}).get("files_scanned", 0)
+    h.record("src layout: own imports resolve without PYTHONPATH", "references/findings.md#missing_imports",
+             scanned > 0 and "missing_imports" not in categories(plain), f"files={scanned} missing_imports={'missing_imports' in categories(plain)}")
 
     third = h.project("thirdparty", {"m.py": '"""Module docstring long enough here."""\nimport zz_definitely_not_installed_pkg\n'})
     _, report, _ = h.scan(third)
     h.record("uninstalled third-party import -> missing_imports", "references/findings.md#missing_imports", "missing_imports" in categories(report), str(sorted(categories(report))))
 
+    # updated for T-36 (D-07, lane P1): error-level logging through any logger name is not silent.
     silent = h.project("silent", {"m.py": textwrap.dedent('''\
         """Module docstring long enough here."""
         import logging
 
         log = logging.getLogger(__name__)
-        logger = logging.getLogger(__name__)
 
 
-        def warns(value: str) -> int:
-            """Parse but only warn on failure."""
+        def swallows(value: str) -> int:
+            """Parse and hide the failure entirely."""
             try:
                 parsed = int(value)
             except ValueError:
-                log.warning("bad value %s", value)
                 parsed = -1
             return parsed
 
 
         def records(value: str) -> int:
-            """Parse and record failure properly."""
+            """Parse and record failure through a short logger name."""
             try:
                 parsed = int(value)
             except ValueError:
-                logger.exception("bad value %s", value)
+                log.exception("bad value %s", value)
                 parsed = -1
             return parsed
+
+
+        class Parser:
+            """Parses values and logs through an attribute logger."""
+
+            def __init__(self) -> None:
+                """Bind the instance logger here."""
+                self.logger = logging.getLogger(__name__)
+                self.count = 0
+
+            def parse(self, value: str) -> int:
+                """Parse and record failure through self.logger."""
+                try:
+                    parsed = int(value)
+                except ValueError:
+                    self.logger.error("bad value %s", value)
+                    parsed = -1
+                self.count += 1
+                return parsed
         ''')})
     _, report, _ = h.scan(silent)
     flagged = {i["symbol"] for i in report.get("issues", []) if i["category"] == "silent_failures"}
-    h.record("silent_failures: log.warning flagged, logger.exception not", "references/findings.md#silent_failures", "warns" in flagged and "records" not in flagged, f"flagged={sorted(flagged)}")
+    h.record("silent_failures: swallowed except flagged; log.exception and self.logger.error not", "references/findings.md#silent_failures",
+             "swallows" in flagged and "records" not in flagged and "Parser.parse" not in flagged, f"flagged={sorted(flagged)}")
 
     shapes = h.project("shapes", {"m.py": textwrap.dedent('''\
         """Module docstring long enough here."""
         import abc
+        from typing import Protocol, overload
+
+
+        class Runnable(Protocol):
+            """Structural contract for runners."""
+
+            def run(self) -> int:
+                """Run the operation for real."""
+                ...
+
+
+        @overload
+        def scale(value: int) -> int: ...
+        @overload
+        def scale(value: float) -> float: ...
+        def scale(value: float) -> float:
+            """Scale a number by two safely."""
+            doubled = value * 2
+            if doubled < 0:
+                doubled = 0
+            result = doubled
+            return result
 
 
         class Base(abc.ABC):
@@ -249,8 +323,13 @@ def check_finding_triggers(h: Harness) -> None:
         ''')})
     _, report, _ = h.scan(shapes)
     cats = {(i["category"], i["symbol"]) for i in report.get("issues", [])}
-    h.record("abstractmethod with ... flagged as stub", "references/findings.md#stubs", ("stubs", "Base.run") in cats, str(sorted(c for c in cats if c[0] == "stubs")))
-    h.record("property setter flagged as duplicate_definitions", "references/findings.md#duplicate_definitions", any(c[0] == "duplicate_definitions" for c in cats), str(sorted(c for c in cats if c[0] == "duplicate_definitions")))
+    # updated for T-36 (D-07, lane P1): declared-abstract bodies and property setters are not findings.
+    stubs = sorted(c for c in cats if c[0] == "stubs")
+    h.record("abstractmethod / Protocol / @overload bodies not flagged as stubs", "references/findings.md#stubs",
+             bool(report.get("summary")) and not any(c[1] in {"Base.run", "Runnable.run", "scale"} for c in stubs), str(stubs))
+    duplicates = sorted(c for c in cats if c[0] == "duplicate_definitions")
+    h.record("property setter not flagged as duplicate_definitions", "references/findings.md#duplicate_definitions",
+             bool(report.get("summary")) and ("duplicate_definitions", "Box.value") not in cats, str(duplicates))
 
     untested = h.project("untested", {"lib/a.py": '"""Library module docstring long enough."""\n\n\ndef double(value: int) -> int:\n    """Double the value carefully."""\n    result = value * 2\n    if result < 0:\n        result = 0\n    final = int(result)\n    return final\n'})
     _, report, _ = h.scan(untested)
@@ -268,6 +347,29 @@ def check_other_tools(h: Harness) -> None:
     proc = h.cli("structure", str(target / "m.py"), cwd=target)
     h.record("structure prints index to stdout and writes nothing", "references/commands.md", proc.returncode == 0 and "Alpha" in proc.stdout and set(target.rglob("*")) == before, f"exit={proc.returncode}")
 
+    # updated for T-36 (D-01, lane P2): a somnus:metadata header line like `#   type: "source-code"` is a comment, not a type comment.
+    stamped = h.project("stamped", {"m.py": textwrap.dedent('''\
+        #!/usr/bin/env python3
+        # somnus:metadata:v2
+        # somnus:
+        #   schema: "somnus://metadata/core/2.0.0"
+        #   classification:
+        #     category: "engineering"
+        #     type: "source-code"
+        # somnus:end
+        """Stamped module docstring."""
+
+
+        class Gamma:
+            """A class in a stamped file."""
+
+            def delta(self) -> int:
+                """A method."""
+                return 1
+        ''')})
+    proc = h.cli("structure", str(stamped / "m.py"), cwd=stamped)
+    h.record("structure indexes a metadata-stamped file", "references/commands.md", proc.returncode == 0 and "Gamma" in proc.stdout, f"exit={proc.returncode} {(proc.stderr.strip().splitlines() or [''])[-1][:120]}")
+
     cache_root = h.project("pycache", {"pkg/__pycache__/x.cpython.pyc": "x", "keep/node_modules/__pycache__/y.pyc": "y"})
     cfg = h.work / "pycache.yaml"
     cfg.write_text(f'roots:\n  - "{cache_root}"\nexclude:\n  - "node_modules/*"\ntargets:\n  - "__pycache__"\ndry_run: false\n', encoding="utf-8")
@@ -275,7 +377,7 @@ def check_other_tools(h: Harness) -> None:
     survived = (cache_root / "pkg" / "__pycache__").exists()
     path_style_ignored = "node_modules/__pycache__" in proc.stderr + proc.stdout
     h.record("pycache-clean --dry-run deletes nothing", "references/commands.md", proc.returncode == 0 and survived, f"exit={proc.returncode} survived={survived}")
-    h.record("pycache exclude 'node_modules/*' does not exclude (names only)", "references/commands.md", path_style_ignored, "path-style exclude ignored" if path_style_ignored else "exclude matched")
+    h.record("pycache exclude 'node_modules/*' is root-anchored (nested node_modules kept)", "references/commands.md", path_style_ignored, "nested dir not excluded" if path_style_ignored else "nested dir excluded")
 
     harness_dir = h.work / "harness"
     first = h.cli("init-test-harness", str(harness_dir))
@@ -290,7 +392,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--python", help="interpreter with somnus-debug installed (runs python -m somnus_debug.cli)")
     args = parser.parse_args(argv)
     if args.python:
-        runner = [str(Path(args.python).expanduser()), "-m", "somnus_debug.cli"]
+        # updated for T-36: absolute (symlinks kept), since every check runs from a temp cwd.
+        runner = [os.path.abspath(Path(args.python).expanduser()), "-m", "somnus_debug.cli"]
     elif shutil.which("somnus-debug"):
         runner = ["somnus-debug"]
     else:

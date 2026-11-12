@@ -1,3 +1,35 @@
+# somnus:metadata:v2
+# somnus:
+#   schema: "somnus://metadata/core/2.0.0"
+#   id: "urn:somnus:artifact:01a19ace-72ae-75b5-981e-cc0b7ad527e4"
+#   revision: 1
+#   title: "Pyproject"
+#   classification:
+#     category: "engineering"
+#     type: "configuration"
+#     role: "normative"
+#     scope: "component"
+#     tags: []
+#   lifecycle:
+#     status: "draft"
+#   authority:
+#     standing: "candidate"
+#     scopes:
+#       - target_ref: "urn:somnus:artifact:01a19ace-72ae-75b5-981e-cc0b7ad527e4"
+#         aspects: ["content"]
+#   time: {}
+#   names:
+#     slug: "pyproject"
+#   knowledge:
+#     coverage: "artifact"
+#     subjects: ["urn:somnus:artifact:01a19ace-72ae-75b5-981e-cc0b7ad527e4"]
+#   access:
+#     visibility: "internal"
+#     allowed_uses: ["archive", "search", "reason"]
+#   ingestion:
+#     disposition: "candidate"
+#     body_role: "configuration"
+# somnus:end
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -45,6 +77,7 @@ somnus-debug = "somnus_debug.cli:main"
 somnus-doctor = "somnus_debug.doctor.core:main"
 somnus-structure = "somnus_debug.structure.core:main"
 somnus-pycache-clean = "somnus_debug.pycache_cleaner.core:main"
+somnus-init-test-harness = "somnus_debug.test_harness.scaffold:main"
 
 # Runtime artifacts that tools in this package generate when *run* (doctor's
 # state DB and reports, self-check output, log files) must never ship inside

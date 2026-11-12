@@ -1,0 +1,733 @@
+{
+ "wiki": "somnus-debug 0.1.0",
+ "baseline": "034f46e",
+ "generated": "2026-11-11",
+ "pages": [
+  {
+   "path": "01-system/architecture.md",
+   "title": "Architecture",
+   "section": "01-system",
+   "bytes": 10511
+  },
+  {
+   "path": "01-system/dependency-map.md",
+   "title": "Dependency map",
+   "section": "01-system",
+   "bytes": 5605
+  },
+  {
+   "path": "01-system/design-invariants.md",
+   "title": "Design invariants",
+   "section": "01-system",
+   "bytes": 7390
+  },
+  {
+   "path": "01-system/execution-model.md",
+   "title": "Execution model",
+   "section": "01-system",
+   "bytes": 7989
+  },
+  {
+   "path": "01-system/lifecycle.md",
+   "title": "Lifecycle",
+   "section": "01-system",
+   "bytes": 8702
+  },
+  {
+   "path": "01-system/module-map.md",
+   "title": "Module map",
+   "section": "01-system",
+   "bytes": 6941
+  },
+  {
+   "path": "01-system/overview.md",
+   "title": "System overview",
+   "section": "01-system",
+   "bytes": 6543
+  },
+  {
+   "path": "01-system/state-and-persistence.md",
+   "title": "State and persistence",
+   "section": "01-system",
+   "bytes": 9615
+  },
+  {
+   "path": "02-installation/compatibility.md",
+   "title": "Compatibility",
+   "section": "02-installation",
+   "bytes": 4866
+  },
+  {
+   "path": "02-installation/environment-detection.md",
+   "title": "Environment detection",
+   "section": "02-installation",
+   "bytes": 7626
+  },
+  {
+   "path": "02-installation/installation.md",
+   "title": "Installation",
+   "section": "02-installation",
+   "bytes": 5650
+  },
+  {
+   "path": "02-installation/package-layout.md",
+   "title": "Package layout",
+   "section": "02-installation",
+   "bytes": 8517
+  },
+  {
+   "path": "02-installation/requirements.md",
+   "title": "Requirements",
+   "section": "02-installation",
+   "bytes": 5815
+  },
+  {
+   "path": "02-installation/verification.md",
+   "title": "Verifying an installation",
+   "section": "02-installation",
+   "bytes": 5156
+  },
+  {
+   "path": "03-getting-started/common-workflows.md",
+   "title": "Common workflows",
+   "section": "03-getting-started",
+   "bytes": 6589
+  },
+  {
+   "path": "03-getting-started/first-project.md",
+   "title": "First project: a full doctor loop on a src-layout package",
+   "section": "03-getting-started",
+   "bytes": 13748
+  },
+  {
+   "path": "03-getting-started/minimal-examples.md",
+   "title": "Minimal examples",
+   "section": "03-getting-started",
+   "bytes": 5638
+  },
+  {
+   "path": "03-getting-started/quickstart.md",
+   "title": "Quickstart",
+   "section": "03-getting-started",
+   "bytes": 10185
+  },
+  {
+   "path": "03-getting-started/troubleshooting-first-run.md",
+   "title": "Troubleshooting the first run",
+   "section": "03-getting-started",
+   "bytes": 7754
+  },
+  {
+   "path": "04-library-api/api-index.md",
+   "title": "API index",
+   "section": "04-library-api",
+   "bytes": 24047
+  },
+  {
+   "path": "04-library-api/async-and-concurrency.md",
+   "title": "Async and concurrency",
+   "section": "04-library-api",
+   "bytes": 5646
+  },
+  {
+   "path": "04-library-api/classes.md",
+   "title": "Classes",
+   "section": "04-library-api",
+   "bytes": 10676
+  },
+  {
+   "path": "04-library-api/exceptions.md",
+   "title": "Exceptions",
+   "section": "04-library-api",
+   "bytes": 8643
+  },
+  {
+   "path": "04-library-api/functions.md",
+   "title": "Functions",
+   "section": "04-library-api",
+   "bytes": 10356
+  },
+  {
+   "path": "04-library-api/internal-interfaces.md",
+   "title": "Internal interfaces",
+   "section": "04-library-api",
+   "bytes": 8484
+  },
+  {
+   "path": "04-library-api/overview.md",
+   "title": "Library API overview",
+   "section": "04-library-api",
+   "bytes": 6208
+  },
+  {
+   "path": "04-library-api/public-api.md",
+   "title": "Public API",
+   "section": "04-library-api",
+   "bytes": 14066
+  },
+  {
+   "path": "04-library-api/types-and-schemas.md",
+   "title": "Types and schemas",
+   "section": "04-library-api",
+   "bytes": 11904
+  },
+  {
+   "path": "05-cli-and-tools/automation-examples.md",
+   "title": "Automation examples",
+   "section": "05-cli-and-tools",
+   "bytes": 9513
+  },
+  {
+   "path": "05-cli-and-tools/command-reference.md",
+   "title": "Command reference",
+   "section": "05-cli-and-tools",
+   "bytes": 32233
+  },
+  {
+   "path": "05-cli-and-tools/exit-codes.md",
+   "title": "Exit codes",
+   "section": "05-cli-and-tools",
+   "bytes": 11460
+  },
+  {
+   "path": "05-cli-and-tools/input-output-contracts.md",
+   "title": "Input and output contracts",
+   "section": "05-cli-and-tools",
+   "bytes": 14448
+  },
+  {
+   "path": "05-cli-and-tools/options-and-flags.md",
+   "title": "Options and flags",
+   "section": "05-cli-and-tools",
+   "bytes": 8660
+  },
+  {
+   "path": "05-cli-and-tools/tooling-integration.md",
+   "title": "Tooling integration",
+   "section": "05-cli-and-tools",
+   "bytes": 9015
+  },
+  {
+   "path": "06-configuration/complete-option-reference.md",
+   "title": "Complete option reference",
+   "section": "06-configuration",
+   "bytes": 92331
+  },
+  {
+   "path": "06-configuration/configuration-atlas.md",
+   "title": "Configuration atlas",
+   "section": "06-configuration",
+   "bytes": 9916
+  },
+  {
+   "path": "06-configuration/configuration-pitfalls.md",
+   "title": "Configuration pitfalls",
+   "section": "06-configuration",
+   "bytes": 9499
+  },
+  {
+   "path": "06-configuration/configuration-recipes.md",
+   "title": "Configuration recipes",
+   "section": "06-configuration",
+   "bytes": 14333
+  },
+  {
+   "path": "06-configuration/defaults.md",
+   "title": "Defaults",
+   "section": "06-configuration",
+   "bytes": 13221
+  },
+  {
+   "path": "06-configuration/environment-variables.md",
+   "title": "Environment variables",
+   "section": "06-configuration",
+   "bytes": 7851
+  },
+  {
+   "path": "06-configuration/file-based-configuration.md",
+   "title": "File-based configuration",
+   "section": "06-configuration",
+   "bytes": 20424
+  },
+  {
+   "path": "06-configuration/hidden-and-conditional-options.md",
+   "title": "Hidden and conditional options",
+   "section": "06-configuration",
+   "bytes": 10167
+  },
+  {
+   "path": "06-configuration/implicit-configuration.md",
+   "title": "Implicit configuration",
+   "section": "06-configuration",
+   "bytes": 9212
+  },
+  {
+   "path": "06-configuration/precedence.md",
+   "title": "Precedence",
+   "section": "06-configuration",
+   "bytes": 12051
+  },
+  {
+   "path": "06-configuration/runtime-configuration.md",
+   "title": "Runtime configuration",
+   "section": "06-configuration",
+   "bytes": 9429
+  },
+  {
+   "path": "07-internals/caching-and-performance.md",
+   "title": "Caching and performance",
+   "section": "07-internals",
+   "bytes": 6034
+  },
+  {
+   "path": "07-internals/call-chains.md",
+   "title": "Call chains",
+   "section": "07-internals",
+   "bytes": 15669
+  },
+  {
+   "path": "07-internals/error-handling.md",
+   "title": "Error handling",
+   "section": "07-internals",
+   "bytes": 8876
+  },
+  {
+   "path": "07-internals/fallbacks.md",
+   "title": "Fallbacks",
+   "section": "07-internals",
+   "bytes": 7255
+  },
+  {
+   "path": "07-internals/implementation-notes.md",
+   "title": "Implementation notes",
+   "section": "07-internals",
+   "bytes": 9604
+  },
+  {
+   "path": "07-internals/initialization.md",
+   "title": "Initialization",
+   "section": "07-internals",
+   "bytes": 7960
+  },
+  {
+   "path": "07-internals/registries-and-discovery.md",
+   "title": "Registries and discovery",
+   "section": "07-internals",
+   "bytes": 9145
+  },
+  {
+   "path": "07-internals/state-transitions.md",
+   "title": "State transitions",
+   "section": "07-internals",
+   "bytes": 7981
+  },
+  {
+   "path": "08-extensions/composition-patterns.md",
+   "title": "Composition patterns",
+   "section": "08-extensions",
+   "bytes": 8269
+  },
+  {
+   "path": "08-extensions/customization.md",
+   "title": "Customization",
+   "section": "08-extensions",
+   "bytes": 9289
+  },
+  {
+   "path": "08-extensions/existing-extension-points.md",
+   "title": "Existing extension points",
+   "section": "08-extensions",
+   "bytes": 7569
+  },
+  {
+   "path": "08-extensions/experimental-extensions.md",
+   "title": "Experimental extensions",
+   "section": "08-extensions",
+   "bytes": 7218
+  },
+  {
+   "path": "08-extensions/extension-overview.md",
+   "title": "Extension overview",
+   "section": "08-extensions",
+   "bytes": 5662
+  },
+  {
+   "path": "08-extensions/hooks-and-events.md",
+   "title": "Hooks and events",
+   "section": "08-extensions",
+   "bytes": 6650
+  },
+  {
+   "path": "08-extensions/plugin-integration.md",
+   "title": "Plugin integration",
+   "section": "08-extensions",
+   "bytes": 5565
+  },
+  {
+   "path": "09-recipes/README.md",
+   "title": "Recipes",
+   "section": "09-recipes",
+   "bytes": 5883
+  },
+  {
+   "path": "09-recipes/advanced/custom-detector-probe.md",
+   "title": "Recipe: prototype a custom detector (private-API probe)",
+   "section": "09-recipes",
+   "bytes": 4817
+  },
+  {
+   "path": "09-recipes/advanced/findings-to-source-slices.md",
+   "title": "Recipe: turn new findings into the exact source lines to read",
+   "section": "09-recipes",
+   "bytes": 4633
+  },
+  {
+   "path": "09-recipes/advanced/quality-ratchet.md",
+   "title": "Recipe: quality ratchet (promote the baseline only when clean)",
+   "section": "09-recipes",
+   "bytes": 4278
+  },
+  {
+   "path": "09-recipes/advanced/src-layout-cycle-check.md",
+   "title": "Recipe: check import cycles in a src-layout project",
+   "section": "09-recipes",
+   "bytes": 3573
+  },
+  {
+   "path": "09-recipes/automation/ci-delta-gate.md",
+   "title": "Recipe: CI regression gate (doctor JSON \u2192 `delta.py`)",
+   "section": "09-recipes",
+   "bytes": 4896
+  },
+  {
+   "path": "09-recipes/automation/history-and-rollback.md",
+   "title": "Recipe: audit runs with `doctor history`, and what `rollback` really does",
+   "section": "09-recipes",
+   "bytes": 5319
+  },
+  {
+   "path": "09-recipes/automation/pre-commit-gate.md",
+   "title": "Recipe: opt-in git pre-commit gate",
+   "section": "09-recipes",
+   "bytes": 3907
+  },
+  {
+   "path": "09-recipes/beginner/first-scan.md",
+   "title": "Recipe: first doctor scan with a config, reports where you want them",
+   "section": "09-recipes",
+   "bytes": 4912
+  },
+  {
+   "path": "09-recipes/beginner/index-one-file.md",
+   "title": "Recipe: index one Python file with `structure`",
+   "section": "09-recipes",
+   "bytes": 4045
+  },
+  {
+   "path": "09-recipes/beginner/pycache-dry-run.md",
+   "title": "Recipe: preview a bytecode cleanup with `pycache-clean`",
+   "section": "09-recipes",
+   "bytes": 4798
+  },
+  {
+   "path": "09-recipes/execution-log.md",
+   "title": "Recipe execution log",
+   "section": "09-recipes",
+   "bytes": 8171
+  },
+  {
+   "path": "09-recipes/integrations/fieldkit-selftest.md",
+   "title": "Recipe: prove the installed CLI still matches the fieldkit (`selftest.py`)",
+   "section": "09-recipes",
+   "bytes": 4187
+  },
+  {
+   "path": "09-recipes/integrations/harness-doctor-delta.md",
+   "title": "Recipe: one harness run = project tests + doctor rescan + delta gate",
+   "section": "09-recipes",
+   "bytes": 6725
+  },
+  {
+   "path": "09-recipes/integrations/harness-pytest.md",
+   "title": "Recipe: wire a project's pytest suite into the single-test harness",
+   "section": "09-recipes",
+   "bytes": 6064
+  },
+  {
+   "path": "09-recipes/intermediate/baseline-delta-loop.md",
+   "title": "Recipe: baseline, change, rescan, delta, triage",
+   "section": "09-recipes",
+   "bytes": 6358
+  },
+  {
+   "path": "09-recipes/intermediate/onboard-a-repo.md",
+   "title": "Recipe: onboard a repository with the fieldkit",
+   "section": "09-recipes",
+   "bytes": 7413
+  },
+  {
+   "path": "09-recipes/intermediate/severity-and-gate-tuning.md",
+   "title": "Recipe: remap a category's severity and choose the exit gate",
+   "section": "09-recipes",
+   "bytes": 4830
+  },
+  {
+   "path": "09-recipes/programmatic/embedded-scan.md",
+   "title": "Recipe: scan in-process with `ProjectScanner` (no files, no logging changes)",
+   "section": "09-recipes",
+   "bytes": 5672
+  },
+  {
+   "path": "09-recipes/programmatic/index-stamped-file.md",
+   "title": "Recipe: index a metadata-stamped file with `build_index`",
+   "section": "09-recipes",
+   "bytes": 3931
+  },
+  {
+   "path": "09-recipes/programmatic/inprocess-main-isolated.md",
+   "title": "Recipe: call doctor's `main()` in-process without losing your logging",
+   "section": "09-recipes",
+   "bytes": 4656
+  },
+  {
+   "path": "10-agent-usage/agent-quickstart.md",
+   "title": "Agent quickstart",
+   "section": "10-agent-usage",
+   "bytes": 7231
+  },
+  {
+   "path": "10-agent-usage/agent-workflows.md",
+   "title": "Agent workflows",
+   "section": "10-agent-usage",
+   "bytes": 6210
+  },
+  {
+   "path": "10-agent-usage/automation-contracts.md",
+   "title": "Automation contracts",
+   "section": "10-agent-usage",
+   "bytes": 12266
+  },
+  {
+   "path": "10-agent-usage/failure-recovery.md",
+   "title": "Failure recovery",
+   "section": "10-agent-usage",
+   "bytes": 11022
+  },
+  {
+   "path": "10-agent-usage/programmatic-invocation.md",
+   "title": "Programmatic invocation",
+   "section": "10-agent-usage",
+   "bytes": 8966
+  },
+  {
+   "path": "10-agent-usage/subagent-patterns.md",
+   "title": "Subagent patterns",
+   "section": "10-agent-usage",
+   "bytes": 6156
+  },
+  {
+   "path": "10-agent-usage/tool-selection.md",
+   "title": "Tool selection",
+   "section": "10-agent-usage",
+   "bytes": 6132
+  },
+  {
+   "path": "11-verification/environment-matrix.md",
+   "title": "Environment matrix",
+   "section": "11-verification",
+   "bytes": 5261
+  },
+  {
+   "path": "11-verification/known-limitations.md",
+   "title": "Known limitations",
+   "section": "11-verification",
+   "bytes": 10212
+  },
+  {
+   "path": "11-verification/reproducible-probes.md",
+   "title": "Reproducible probes",
+   "section": "11-verification",
+   "bytes": 8417
+  },
+  {
+   "path": "11-verification/test-architecture.md",
+   "title": "Test architecture",
+   "section": "11-verification",
+   "bytes": 7584
+  },
+  {
+   "path": "11-verification/tested-behaviors.md",
+   "title": "Tested behaviors",
+   "section": "11-verification",
+   "bytes": 7575
+  },
+  {
+   "path": "11-verification/untested-behaviors.md",
+   "title": "Untested behaviors",
+   "section": "11-verification",
+   "bytes": 6376
+  },
+  {
+   "path": "11-verification/verification-results.md",
+   "title": "Verification results",
+   "section": "11-verification",
+   "bytes": 9597
+  },
+  {
+   "path": "12-discoveries/implementation-discrepancies.md",
+   "title": "Implementation Discrepancies",
+   "section": "12-discoveries",
+   "bytes": 3279
+  },
+  {
+   "path": "12-discoveries/implicit-behaviors.md",
+   "title": "Implicit Behaviors",
+   "section": "12-discoveries",
+   "bytes": 1828
+  },
+  {
+   "path": "12-discoveries/latent-interfaces.md",
+   "title": "Latent Interfaces",
+   "section": "12-discoveries",
+   "bytes": 1330
+  },
+  {
+   "path": "12-discoveries/research-opportunities.md",
+   "title": "Research Opportunities",
+   "section": "12-discoveries",
+   "bytes": 1420
+  },
+  {
+   "path": "12-discoveries/surprising-defaults.md",
+   "title": "Surprising Defaults",
+   "section": "12-discoveries",
+   "bytes": 1799
+  },
+  {
+   "path": "12-discoveries/undocumented-capabilities.md",
+   "title": "Undocumented Capabilities",
+   "section": "12-discoveries",
+   "bytes": 2430
+  },
+  {
+   "path": "12-discoveries/unexpected-compositions.md",
+   "title": "Unexpected Compositions",
+   "section": "12-discoveries",
+   "bytes": 1540
+  },
+  {
+   "path": "12-discoveries/unresolved-questions.md",
+   "title": "Unresolved Questions",
+   "section": "12-discoveries",
+   "bytes": 1729
+  },
+  {
+   "path": "13-reference/configuration-index.md",
+   "title": "Configuration index",
+   "section": "13-reference",
+   "bytes": 25315
+  },
+  {
+   "path": "13-reference/entrypoint-index.md",
+   "title": "Entrypoint index",
+   "section": "13-reference",
+   "bytes": 7412
+  },
+  {
+   "path": "13-reference/file-index.md",
+   "title": "File index",
+   "section": "13-reference",
+   "bytes": 9593
+  },
+  {
+   "path": "13-reference/module-index.md",
+   "title": "Module index",
+   "section": "13-reference",
+   "bytes": 6847
+  },
+  {
+   "path": "13-reference/symbol-index.md",
+   "title": "Symbol index",
+   "section": "13-reference",
+   "bytes": 47328
+  },
+  {
+   "path": "13-reference/terminology.md",
+   "title": "Terminology",
+   "section": "13-reference",
+   "bytes": 1190
+  },
+  {
+   "path": "CAPABILITY-ATLAS.md",
+   "title": "Capability Atlas",
+   "section": "top",
+   "bytes": 10886
+  },
+  {
+   "path": "COVERAGE-REPORT.md",
+   "title": "Coverage Report",
+   "section": "top",
+   "bytes": 6102
+  },
+  {
+   "path": "DISCOVERY-LEDGER.md",
+   "title": "Discovery Ledger",
+   "section": "top",
+   "bytes": 28179
+  },
+  {
+   "path": "GLOSSARY.md",
+   "title": "Glossary",
+   "section": "top",
+   "bytes": 3706
+  },
+  {
+   "path": "INDEX.md",
+   "title": "Index",
+   "section": "top",
+   "bytes": 11673
+  },
+  {
+   "path": "README.md",
+   "title": "somnus-debug Wiki",
+   "section": "top",
+   "bytes": 3588
+  },
+  {
+   "path": "START-HERE.md",
+   "title": "Start Here",
+   "section": "top",
+   "bytes": 2630
+  },
+  {
+   "path": "_evidence/README.md",
+   "title": "Evidence Tree",
+   "section": "_evidence",
+   "bytes": 3002
+  },
+  {
+   "path": "_evidence/command-observations.md",
+   "title": "Command Observations",
+   "section": "_evidence",
+   "bytes": 2480
+  },
+  {
+   "path": "_evidence/experiment-log.md",
+   "title": "Experiment Log",
+   "section": "_evidence",
+   "bytes": 3437
+  },
+  {
+   "path": "_evidence/source-inventory.md",
+   "title": "Source Inventory",
+   "section": "_evidence",
+   "bytes": 6498
+  },
+  {
+   "path": "_evidence/verification-manifest.md",
+   "title": "Verification Manifest",
+   "section": "_evidence",
+   "bytes": 4743
+  }
+ ]
+}

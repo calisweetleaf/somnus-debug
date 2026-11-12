@@ -1,0 +1,8 @@
+top-level keys: ['config_hash', 'dependency_graph', 'files', 'finished_at', 'issues', 'project_root', 'run_id', 'started_at', 'state_delta', 'summary']
+summary: {'critical_issues': 0, 'dependency_cycles': 0, 'files_scanned': 3, 'info_issues': 0, 'minor_issues': 1, 'missing_imports': 0, 'production_score': 98, 'serious_issues': 0, 'suspicious_short_classes': 0, 'suspicious_short_functions': 1, 'syntax_error_files': 0, 'total_issues': 1}
+issue keys: ['category', 'column_offset', 'details', 'evidence', 'file_path', 'line_number', 'message', 'remediation', 'severity', 'symbol']
+file keys: ['classes', 'code_map', 'file_hash', 'file_path', 'functions', 'import_edges', 'imports', 'issues', 'metrics', 'modified_time', 'relative_path', 'size_bytes', 'syntax_valid']
+function keys: ['argument_count', 'cyclomatic_complexity', 'decorators', 'end_line_number', 'executable_line_count', 'has_docstring', 'kind', 'line_number', 'missing_type_hints', 'qualname', 'return_count', 'statement_count']
+state_delta: {'deleted_files': [], 'modified_files': [], 'new_files': ['src/calc/__init__.py', 'src/calc/ops.py', 'tests/test_ops.py'], 'unchanged_files': []}
+dependency_graph keys: ['cycles', 'edges', 'mermaid', 'missing_imports', 'nodes']
+edge keys: ['classification', 'confidence', 'imported_module', 'line_number', 'raw', 'source_file', 'status', 'target_file']
