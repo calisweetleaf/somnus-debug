@@ -451,7 +451,7 @@ def test_version_falls_back_when_not_installed() -> None:
         "    raise md.PackageNotFoundError(name)\n"
         "md.version = _version"
     )
-    assert _version_with(patch) == "0.1.0"
+    assert _version_with(patch) == "0.1.1"
 
 
 # ---------------------------------------------------------------------------

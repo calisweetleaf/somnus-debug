@@ -137,6 +137,15 @@ This section lists what needs the operator's call before any code. Each has the 
 
 ## Notes
 
+### Release 0.1.1
+
+- Published wheel and sdist to TestPyPI, verified an index install (30/30 selftest), then published the identical artifacts to PyPI under explicit operator authorization.
+- Built from source commit `9015566`; `twine check` passed for both artifacts. Source regression suite: 163 passed (four existing collection warnings). Version fallback assertion updated for 0.1.1.
+- Wheel SHA-256: `5f1c7cf3fa4f9c2c66bf7a184c8e045263f733ad7d52c6a68937d760944e57c5`.
+- Sdist SHA-256: `9c3f9db3936a23b615cdbaff9ae7e2af600ec55f065b3019ffbaa5f8c90f1505`. Both match the public PyPI release metadata.
+- Installed the PyPI package into the global venv and the existing uv tool environment. The latter previously referenced an old local checkout; package installation now comes from PyPI.
+- Existing T-50..T-59 design decisions remain separate; this fixes release-blocking regressions without claiming those policy choices are resolved. No broad doctor/readiness certification was performed.
+
 This section lists discoveries that need no code change.
 
 | Discovery | Note |
