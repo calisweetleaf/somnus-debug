@@ -60,7 +60,7 @@ from importlib import metadata as _metadata
 # distribution exposes it through its metadata.  Running from a source tree
 # (PYTHONPATH=src, no install) has no distribution, so fall back to the
 # release this tree was cut from.
-_SOURCE_TREE_VERSION = "0.1.0"
+_SOURCE_TREE_VERSION = "0.1.1"
 
 try:
     __version__ = _metadata.version("somnus-debug")

@@ -36,7 +36,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "somnus-debug"
-version = "0.1.0"
+version = "0.1.1"
 description = "Somnus Sovereign Systems' project-agnostic Python developer toolkit: production-readiness diagnostics, class/definition structure indexing, pycache cleanup, and a portable single-test harness scaffold."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -70,7 +70,7 @@ dev = ["pytest>=7"]
 Homepage = "https://github.com/calisweetleaf/somnus-debug"
 Repository = "https://github.com/calisweetleaf/somnus-debug"
 Issues = "https://github.com/calisweetleaf/somnus-debug/issues"
-Documentation = "https://github.com/calisweetleaf/somnus-debug/blob/master/docs/MANUAL.md"
+Documentation = "https://github.com/calisweetleaf/somnus-debug/blob/main/docs/MANUAL.md"
 
 [project.scripts]
 somnus-debug = "somnus_debug.cli:main"
